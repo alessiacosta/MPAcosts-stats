@@ -1,0 +1,74 @@
+---
+title: "Ch3-MPAcosts"
+---
+
+# Loading packages needed fro the project
+
+```{r}
+library(readr)
+library(ggplot2)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(dplyr)
+library(sf)
+```
+
+# Making a map of the MPAs I found data for
+
+## Loading the data
+
+```{r}
+#upload the right data
+fig1 <- read_csv("../Data/fig1.csv")
+```
+
+## Making global map with my data
+
+```{r}
+# Get world map data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+png("Map1.png", width = 2500, height = 2000, res = 150)
+# Create the world map
+# Load the coastline data from rnaturalearth
+coastline_data <- ne_coastline(scale = "medium", returnclass = "sf")
+
+# Create the plot
+ggplot() +  
+  # Plot countries in a very light grey
+  geom_sf(data = world, fill = "grey95", color = NA) +  
+  # Overlay the coastline in black
+  geom_sf(data = coastline_data, color = "black", fill = NA) +  
+  # Plot your data points
+  geom_point(data = fig1, aes(x = Longitude, y = Latitude), color = "#008080", size = 4) +  
+  # Set coordinate system
+  coord_sf() +  
+  # Adjust theme
+  theme_minimal() +  
+  theme(
+    axis.text = element_text(size = 24),
+    axis.title = element_blank(),  # Removes axis titles
+    axis.line.x = element_line(color = "black", size = 0.5),
+    axis.line.y = element_line(color = "black", size = 0.5),
+    axis.ticks = element_line(color = "black", size = 0.5),
+    panel.grid = element_blank()
+  )
+dev.off()
+
+```
+```{r}
+# Convert fig1 to an sf object (assuming Longitude and Latitude columns)
+fig1_sf <- st_as_sf(fig1, coords = c("Longitude", "Latitude"), crs = 4326)
+
+# Load world landmass polygons
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Identify points that fall on land
+points_on_land <- st_join(fig1_sf, world, left = FALSE)  # Keeps only points that intersect with land
+
+# View the incorrect points
+print(points_on_land)
+
+```
+
+
