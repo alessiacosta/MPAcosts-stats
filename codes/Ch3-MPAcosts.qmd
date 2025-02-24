@@ -7,15 +7,17 @@ title: "Ch3-MPAcosts"
 ```{r}
 library(readr)
 library(ggplot2)
-library(rnaturalearth)
-library(rnaturalearthdata)
+library(rnaturalearth) # to make a world map
+library(rnaturalearthdata) # data for world map with polygons of the coastline only
 library(dplyr)
 library(sf)
+library(ggspatial) # to add spatial elements to a ggplot map
+library(car)
 ```
 
 # Making a map of the MPAs I found data for
 
-## Loading the data
+## Loading the map data
 
 ```{r}
 #upload the right data
@@ -42,7 +44,7 @@ ggplot() +
   # Plot your data points
   geom_point(data = fig1, aes(x = Longitude, y = Latitude), color = "#008080", size = 4) +  
   # Set coordinate system
-  coord_sf() +  
+  coord_sf() +
   # Adjust theme
   theme_minimal() +  
   theme(
@@ -56,19 +58,55 @@ ggplot() +
 dev.off()
 
 ```
+
+
+
+
+
+# Statistics
+
+## Loading the data
 ```{r}
-# Convert fig1 to an sf object (assuming Longitude and Latitude columns)
-fig1_sf <- st_as_sf(fig1, coords = c("Longitude", "Latitude"), crs = 4326)
-
-# Load world landmass polygons
-world <- ne_countries(scale = "medium", returnclass = "sf")
-
-# Identify points that fall on land
-points_on_land <- st_join(fig1_sf, world, left = FALSE)  # Keeps only points that intersect with land
-
-# View the incorrect points
-print(points_on_land)
+#loading the data
+data <- read_csv("../Data/ch3data.csv")
+#setting up the data
 
 ```
+
+
+## Data exploration
+```{r}
+
+
+```
+
+```{r}
+#model
+# Linear regression model with the specified predictors
+model <- lm(Cost_km ~ Cost_class + Cost_type + Fully_protected + GDP_pc + GDP_class, data = data)
+
+# View the summary of the model
+summary(model)
+vif(model)
+
+#plot
+plot(model)
+
+# Plot the residuals to check for normality (Gaussian distribution)
+#par(mfrow = c(1, 2))  # Set up a 2-panel plot
+#plot(model$fitted.values, model$residuals, main = "Residuals vs Fitted", xlab = "Fitted Values", ylab = "Residuals")
+#hist(model$residuals, breaks = 30, main = "Histogram of Residuals", xlab = "Residuals", col = "lightblue", border = "black")
+
+```
+
+
+
+
+
+
+
+
+
+
 
 
