@@ -76,8 +76,8 @@ data <- read_csv("../Data/ch3data.csv")
 
 ## Data exploration
 ```{r}
-
-
+boxplot(Cost_km~GDP_class, data=data)
+hist(data$Cost_km, breaks=60)
 ```
 
 ```{r}

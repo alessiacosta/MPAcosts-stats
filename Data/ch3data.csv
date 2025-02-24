@@ -1,63 +1,65 @@
-﻿ID,MPA_name,Country,Cost_class,Cost_type,2024_AUD,MPA_size,Cost_km,GDP_pc,GDP_class,Fully_protected,
-VT22,Porto Cesareo Marine Protected Area,Italy,Management,pa,"699,141.00",166.54,4198.036508,"60,602.00",High Income,1.2,
-VT22,Porto Cesareo Marine Protected Area,Italy,Total,pa,"1,794,547.00",166.54,10775.47136,"60,602.00",High Income,1.2,
-MSZ11,Bibilik MPA,Philippines,Establishment,package,"45,087.00",0.2,225435,"5,912.00",Lower-middle Income,100,
-MSZ11,Talisay MPA,Philippines,Establishment,package,"16,542.00",0.3,55140,"5,912.00",Lower-middle Income,60,
-MSZ11,CHICOP,Tanzania ,Establishment,package,"3,479,558.00",0.5,6959116,"1,903.00",Lower-middle Income,100,
-MSZ11,Villahermosa MS,Philippines,Establishment,package,"17,973.00",0.7,25675.71429,"5,912.00",Lower-middle Income,43,
-MSZ11,Tambunan MPA,Philippines,Establishment,package,"39,989.00",1,39989,"5,912.00",Lower-middle Income,100,
-MSZ11,MISSTA MPA,Philippines,Establishment,package,"35,247.00",1.6,22029.375,"5,912.00",Lower-middle Income,100,
-MSZ11,Pilar MPA,Philippines,Establishment,package,"18,045.00",1.8,10025,"5,912.00",Lower-middle Income,100,
-MSZ11,Saba MP,Netherland Antilles,Establishment,package,"1,224,499.00",8.7,140747.0115,"15,819.00",Upper-middle Income,17,
-MSZ11,Bonaire NMP,Netherland Antilles,Establishment,package,"2,516,204.00",27,93192.74074,"15,819.00",Upper-middle Income,15,
-MSZ11,Nha Trang Bay MPA,Vietnam,Establishment,package,"5,209,777.00",160,32561.10625,"6,653.00",Lower-middle Income,10,
-MSZ11,Seaflower MPA,Colombia,Establishment,package,"32,511,598.00",65018,500.0399582,"10,795.00",Upper-middle Income,4,
-MSZ11,Mariana Trench MNM,USA,Establishment,package,"21,974,469.00",246608,89.10687812,"128,605.00",High Income,0,
-MSZ11,PMNM,USA,Establishment,package,"76,471,151.00",362100,211.1879343,"128,605.00",High Income,100,
-RNC15,Taputeranga marine reserve,New Zealand,Pre-establishment,package,"546,626.00",8.54,64007.72834,"75,018.00",High Income,100,
-RNC15,Taputeranga marine reserve,New Zealand,Management,pa,"64,971.00",8.54,7607.845433,"75,018.00",High Income,100,
-RNC15,Taputeranga marine reserve,New Zealand,Management,pa,"120,333.00",8.54,14090.51522,"75,018.00",High Income,100,
-RNC15,Taputeranga marine reserve,New Zealand,Management,pa,"86,847.00",8.54,10169.43794,"75,018.00",High Income,100,
+﻿ID,MPA_name,Country,Cost_class,Cost_type,2024_AUD,MPA_size,Cost_km,GDP_pc,GDP_class,Fully_protected,Protection_level
+VT22,Porto Cesareo Marine Protected Area,Italy,Management,pa,"699,141.00",166.54,4198.0,"60,602.00",High Income,1.2,MPA
+VT22,Porto Cesareo Marine Protected Area,Italy,Total,pa,"1,794,547.00",166.54,10775.5,"60,602.00",High Income,1.2,MPA
+MSZ11,Bibilik MPA,Philippines,Establishment,package,"45,087.00",0.2,225435.0,"5,912.00",Lower-middle Income,100,Marine reserve
+MSZ11,Talisay MPA,Philippines,Establishment,package,"16,542.00",0.3,55140.0,"5,912.00",Lower-middle Income,60,MPA
+MSZ11,CHICOP,Tanzania ,Establishment,package,"3,479,558.00",0.5,6959116.0,"1,903.00",Lower-middle Income,100,Marine reserve
+MSZ11,Villahermosa MS,Philippines,Establishment,package,"17,973.00",0.7,25675.7,"5,912.00",Lower-middle Income,43,MPA
+MSZ11,Tambunan MPA,Philippines,Establishment,package,"39,989.00",1,39989.0,"5,912.00",Lower-middle Income,100,Marine reserve
+MSZ11,MISSTA MPA,Philippines,Establishment,package,"35,247.00",1.6,22029.4,"5,912.00",Lower-middle Income,100,Marine reserve
+MSZ11,Pilar MPA,Philippines,Establishment,package,"18,045.00",1.8,10025.0,"5,912.00",Lower-middle Income,100,Marine reserve
+MSZ11,Saba MP,Netherland Antilles,Establishment,package,"1,224,499.00",8.7,140747.0,"15,819.00",Upper-middle Income,17,MPA
+MSZ11,Bonaire NMP,Netherland Antilles,Establishment,package,"2,516,204.00",27,93192.7,"15,819.00",Upper-middle Income,15,MPA
+MSZ11,Nha Trang Bay MPA,Vietnam,Establishment,package,"5,209,777.00",160,32561.1,"6,653.00",Lower-middle Income,10,MPA
+MSZ11,Seaflower MPA,Colombia,Establishment,package,"32,511,598.00",65018,500.0,"10,795.00",Upper-middle Income,4,MPA
+MSZ11,Mariana Trench MNM,USA,Establishment,package,"21,974,469.00",246608,89.1,"128,605.00",High Income,0,MPA
+MSZ11,PMNM,USA,Establishment,package,"76,471,151.00",362100,211.2,"128,605.00",High Income,100,Marine reserve
+RNC15,Taputeranga marine reserve,New Zealand,Pre-establishment,package,"546,626.00",8.54,64007.7,"75,018.00",High Income,100,Marine reserve
+RNC15,Taputeranga marine reserve,New Zealand,Management,pa,"64,971.00",8.54,7607.8,"75,018.00",High Income,100,Marine reserve
+RNC15,Taputeranga marine reserve,New Zealand,Management,pa,"120,333.00",8.54,14090.5,"75,018.00",High Income,100,Marine reserve
+RNC15,Taputeranga marine reserve,New Zealand,Management,pa,"86,847.00",8.54,10169.4,"75,018.00",High Income,100,Marine reserve
 RNC15,"Te Tapuwae o Rongokako marine
-reserve",New Zealand,Management,pa,"81,615.00",24.52,3328.507341,"75,018.00",High Income,100,
+reserve",New Zealand,Management,pa,"81,615.00",24.52,3328.5,"75,018.00",High Income,100,Marine reserve
 RNC15,"Te Tapuwae o Rongokako marine
-reserve",New Zealand,Management,pa,"84,714.00",24.52,3454.893964,"75,018.00",High Income,100,
+reserve",New Zealand,Management,pa,"84,714.00",24.52,3454.9,"75,018.00",High Income,100,Marine reserve
 RNC15,"Te Tapuwae o Rongokako marine
-reserve",New Zealand,Management,pa,"62,792.00",24.52,2560.848287,"75,018.00",High Income,100,
+reserve",New Zealand,Management,pa,"62,792.00",24.52,2560.8,"75,018.00",High Income,100,Marine reserve
 RNC15,"Kapiti marine
-reserve",New Zealand,Management,pa,"62,488.00",21.67,2883.617905,"75,018.00",High Income,100,
-RNC15,Kapiti marine reserve,New Zealand,Management,pa,"60,648.00",21.67,2798.707891,"75,018.00",High Income,100,
-RNC15,Kapiti marine reserve,New Zealand,Management,pa,"60,646.00",21.67,2798.615598,"75,018.00",High Income,100,
-RNC15,Tonga Island marine reserve,New Zealand,Management,pa,"77,350.00",18.35,4215.258856,"75,018.00",High Income,100,
-RNC15,Tonga Island marine reserve,New Zealand,Management,pa,"66,898.00",18.35,3645.667575,"75,018.00",High Income,100,
-RNC15,Tonga Island marine reserve,New Zealand,Management,pa,"77,024.00",18.35,4197.493188,"75,018.00",High Income,100,
-RNC15,Tapuae marine reserve,New Zealand,Management,pa,"60,468.00",14.04,4306.837607,"75,018.00",High Income,100,
-RNC15,Tapuae marine reserve,New Zealand,Management,pa,"51,021.00",14.04,3633.974359,"75,018.00",High Income,100,
-RNC15,Tapuae marine reserve,New Zealand,Management,pa,"48,788.00",14.04,3474.928775,"75,018.00",High Income,100,
-RNC15,Taputeranga marine reserve,New Zealand,Opportunity,pa,"23,837.00",8.54,2791.217799,"75,018.00",High Income,100,
-RNC15,Taputeranga marine reserve,New Zealand,Establishment,package,"379,892.00",8.54,44483.84075,"75,018.00",High Income,100,
-LS12,Kofiau and Boo Islands Marine Protected Area,Indonesia,Community outreach,package,"1,600,330.00",1700,941.3705882,"7,577.00",Upper-middle Income,100,
-RGB09,Montego Bay Marine Park,Jamaica,Management,pa,"184,230.00",15.3,12041.17647,"10,627.00",Upper-middle Income,0,
-TA20,Isole Ciclopi,Italy,Management,pa,"4,059,093.18",6.5,624475.8738,"60,602.00",High Income,NA,
-CH05,Tortugas Ecological Reserve,USA,Compliance,pa,"1,178,798.00",518,2275.671815,"128,605.00",High Income,100,
-WV00,Apo Island Marine Sanctuary,Philippines,Maintenance,pa,"24,161.00",1,24161,"5,912.00",Lower-middle Income,32,
-WV00,Apo Island Marine Sanctuary,Philippines,Maintenance,pa,"362,411.00",1,362411,"5,912.00",Lower-middle Income,32,
-L24,Great Barrier Reef Marine Reserve,Australia,Opportunity,package,"360,757,024.00",350000,1030.734354,"100,717.00",High Income,33,
-AR18,Regno di Nettuno,Italy,Opportunity,pa,"887,624,513.00",112.56,7885789.916,"60,602.00",High Income,NA,
-AR18,Underwater Parks of Gaiola,Italy,Opportunity,pa,"13,957,848.00",1.77,7885789.831,"60,602.00",High Income,NA,
-AR18,Underwater Parks of Baia,Italy,Opportunity,pa,"3,280,489.00",0.416,7885790.865,"60,602.00",High Income,NA,
-AR18,Punta Campanella,Italy,Opportunity,pa,"121,362,307.00",15.39,7885789.929,"60,602.00",High Income,NA,
-GL14,Mnemba-Chwaka Bay Marine Conservation Area (MIMCA),Tanzania ,Establishment,package,"79,250,230.00",337.3,234954.7287,"1,903.00",Lower-middle Income,NA,
-GF13,Marine Life Protection Act (MLPA) in California,USA,Pre-establishment,,"27,214,625.00",2197,12387.17569,"128,605.00",High Income,9.4,
-GF13,Marine Life Protection Act (MLPA) in California,USA,Establishment,,"6,140,736.00",2197,2795.055075,"128,605.00",High Income,9.4,
-GF13,Marine Life Protection Act (MLPA) in California,USA,Planning,package,"25,819,003.00",2197,11751.93582,"128,605.00",High Income,9.4,
-SK23,Ujung Kulon National Park,Indonesia,,,"2,319,693.00",44.337,52319.57507,"7,577.00",Upper-middle Income,,
-SK23,Ujung Kulon National Park,Indonesia,,,"35,496.00",44.337,800.5954395,"7,577.00",Upper-middle Income,,
-SK23,Ujung Kulon National Park,Indonesia,,,"91,508.00",44.337,2063.919525,"7,577.00",Upper-middle Income,,
-SK23,Ujung Kulon National Park,Indonesia,,,"1,526,583.00",44.337,34431.3553,"7,577.00",Upper-middle Income,,
-SK23,Ujung Kulon Natinoal Park,Indonesia,,,"75,495.00",44.337,1702.753908,"7,577.00",Upper-middle Income,,
-P20,Kosterhavet marine national park,Sweden,,,"2,962,698.00",389,7616.190231,"86,261.00",High Income,,
-XS17,Nha Trang Bay Marine Protected Area,Vietnam,,,"243,260.00",250,973.04,"6,653.00",Lower-middle Income,,
-XS17,Nha Trang Bay Marine Protected Area,Vietnam,,,"4,394,894.00",250,17579.576,"6,653.00",Lower-middle Income,,
-AV23,Tabarca Marine Reserve,Spain,,,"2,560,095.00",0.3,8533650,"52,065.00",High Income,,
-AV23,Tabarca Marine Reserve,Spain,,,"10,318,866.00",0.3,34396220,"52,065.00",High Income,,
+reserve",New Zealand,Management,pa,"62,488.00",21.67,2883.6,"75,018.00",High Income,100,Marine reserve
+RNC15,Kapiti marine reserve,New Zealand,Management,pa,"60,648.00",21.67,2798.7,"75,018.00",High Income,100,Marine reserve
+RNC15,Kapiti marine reserve,New Zealand,Management,pa,"60,646.00",21.67,2798.6,"75,018.00",High Income,100,Marine reserve
+RNC15,Tonga Island marine reserve,New Zealand,Management,pa,"77,350.00",18.35,4215.3,"75,018.00",High Income,100,Marine reserve
+RNC15,Tonga Island marine reserve,New Zealand,Management,pa,"66,898.00",18.35,3645.7,"75,018.00",High Income,100,Marine reserve
+RNC15,Tonga Island marine reserve,New Zealand,Management,pa,"77,024.00",18.35,4197.5,"75,018.00",High Income,100,Marine reserve
+RNC15,Tapuae marine reserve,New Zealand,Management,pa,"60,468.00",14.04,4306.8,"75,018.00",High Income,100,Marine reserve
+RNC15,Tapuae marine reserve,New Zealand,Management,pa,"51,021.00",14.04,3634.0,"75,018.00",High Income,100,Marine reserve
+RNC15,Tapuae marine reserve,New Zealand,Management,pa,"48,788.00",14.04,3474.9,"75,018.00",High Income,100,Marine reserve
+RNC15,Taputeranga marine reserve,New Zealand,Opportunity,pa,"23,837.00",8.54,2791.2,"75,018.00",High Income,100,Marine reserve
+RNC15,Taputeranga marine reserve,New Zealand,Establishment,package,"379,892.00",8.54,44483.8,"75,018.00",High Income,100,Marine reserve
+LS12,Kofiau and Boo Islands Marine Protected Area,Indonesia,Community outreach,package,"1,600,330.00",1700,941.4,"7,577.00",Upper-middle Income,100,Marine reserve
+RGB09,Montego Bay Marine Park,Jamaica,Management,pa,"184,230.00",15.3,12041.2,"10,627.00",Upper-middle Income,0,MPA
+TA20,Isole Ciclopi,Italy,Management,pa,"4,059,093.18",6.5,624475.9,"60,602.00",High Income,,MPA
+CH05,Tortugas Ecological Reserve,USA,Compliance,pa,"1,178,798.00",518,2275.7,"128,605.00",High Income,100,Marine reserve
+WV00,Apo Island Marine Sanctuary,Philippines,Maintenance,pa,"24,161.00",1,24161.0,"5,912.00",Lower-middle Income,32,MPA
+WV00,Apo Island Marine Sanctuary,Philippines,Maintenance,pa,"362,411.00",1,362411.0,"5,912.00",Lower-middle Income,32,MPA
+L24,Great Barrier Reef Marine Reserve,Australia,Opportunity,package,"360,757,024.00",350000,1030.7,"100,717.00",High Income,33,MPA
+AR18,Regno di Nettuno,Italy,Opportunity,pa,"887,624,513.00",112.56,7885789.9,"60,602.00",High Income,NA,MPA
+AR18,Underwater Parks of Gaiola,Italy,Opportunity,pa,"13,957,848.00",1.77,7885789.8,"60,602.00",High Income,NA,MPA
+AR18,Underwater Parks of Baia,Italy,Opportunity,pa,"3,280,489.00",0.416,7885790.9,"60,602.00",High Income,NA,MPA
+AR18,Punta Campanella,Italy,Opportunity,pa,"121,362,307.00",15.39,7885789.9,"60,602.00",High Income,NA,MPA
+GL14,Mnemba-Chwaka Bay Marine Conservation Area (MIMCA),Tanzania ,Establishment,package,"79,250,230.00",337.3,234954.7,"1,903.00",Lower-middle Income,NA,MPA
+GF13,Marine Life Protection Act (MLPA) in California,USA,Pre-establishment,package,"27,214,625.00",2197,12387.2,"128,605.00",High Income,9.4,MPA
+GF13,Marine Life Protection Act (MLPA) in California,USA,Establishment,package,"6,140,736.00",2197,2795.1,"128,605.00",High Income,9.4,MPA
+GF13,Marine Life Protection Act (MLPA) in California,USA,Planning,package,"25,819,003.00",2197,11751.9,"128,605.00",High Income,9.4,MPA
+SK23,Ujung Kulon National Park,Indonesia,Establishment,package,"2,657,237.00",44.337,59932.7,"7,577.00",Upper-middle Income,,MPA
+SK23,Ujung Kulon National Park,Indonesia,Management,pa,"35,496.00",44.337,800.6,"7,577.00",Upper-middle Income,,MPA
+SK23,Ujung Kulon National Park,Indonesia,Administrative,pa,"91,508.00",44.337,2063.9,"7,577.00",Upper-middle Income,,MPA
+SK23,Ujung Kulon National Park,Indonesia,Opportunity,pa,"1,526,583.00",44.337,34431.4,"7,577.00",Upper-middle Income,,MPA
+SK23,Ujung Kulon Natinoal Park,Indonesia,Enforcement,pa,"75,495.00",44.337,1702.8,"7,577.00",Upper-middle Income,,MPA
+SK23,Ujung Kulon Natinoal Park,Indonesia,Transaction,pa,"96,118.00",44.337,2167.9,"7,577.00",Upper-middle Income,,MPA
+SK23,Ujung Kulon Natinoal Park,Indonesia,Administrative,pa,"69,577.00",44.337,1569.3,"7,577.00",Upper-middle Income,,MPA
+P20,Kosterhavet marine national park,Sweden,Maintenance,pa,"2,962,698.00",389,7616.2,"86,261.00",High Income,,MPA
+XS17,Nha Trang Bay Marine Protected Area,Vietnam,Management,pa,"243,260.00",250,973.0,"6,653.00",Lower-middle Income,,MPA
+XS17,Nha Trang Bay Marine Protected Area,Vietnam,Establishment,package,"4,394,894.00",250,17579.6,"6,653.00",Lower-middle Income,,MPA
+AV23,Tabarca Marine Reserve,Spain,Maintenance,pa,"256,009.00",14,18286.4,"52,065.00",High Income,,MPA
+AV23,Tabarca Marine Reserve,Spain,Maintenance,pa,"1,031,887.00",14,73706.2,"52,065.00",High Income,,MPA
