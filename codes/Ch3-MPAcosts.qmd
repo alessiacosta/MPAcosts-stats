@@ -63,27 +63,35 @@ dev.off()
 
 
 
+
 # Statistics
 
 ## Loading the data
 ```{r}
 #loading the data
 data <- read_csv("../Data/ch3data.csv")
+View(data)
 #setting up the data
-
+data = data |> mutate(Protection_level=factor(Protection_level))
 ```
 
 
 ## Data exploration
 ```{r}
+#looking at distribution for costs/km2 divided by gdp class
 boxplot(Cost_km~GDP_class, data=data)
+#looking at the distribution for cost/km2
 hist(data$Cost_km, breaks=60)
+#distribution of total costs 
+hist(data$'2024_AUD', breaks=60)
+#looking at the distribution of costs/km2 divided by cost category
+boxplot(Cost_km~Protection_level, data=data)
 ```
 
 ```{r}
 #model
 # Linear regression model with the specified predictors
-model <- lm(Cost_km ~ Cost_class + Cost_type + Fully_protected + GDP_pc + GDP_class, data = data)
+model <- lm(Cost_km ~ Protection_level + GDP_pc, data = data)
 
 # View the summary of the model
 summary(model)
@@ -98,7 +106,41 @@ plot(model)
 #hist(model$residuals, breaks = 30, main = "Histogram of Residuals", xlab = "Residuals", col = "lightblue", border = "black")
 
 ```
+## Making three different models
+```{r}
+#filtering data based on: establishment, maintenance and compliance
+establishment = filter(data, Cost_class == "Establishment")
+# Linear regression model with the specified predictors
+model1 <- lm(Cost_km ~ Protection_level + GDP_pc, data = establishment)
+# View the summary of the model
+summary(model1)
+plot(model1)
+View(establishment)
 
+#filtering data based on: establishment, maintenance and compliance
+maintenance = filter(data, Cost_class == "Maintenance") # see notes this is not displaying all the maintenance data I have 
+#maintenance1 = filter(data, Cost_class %in% c("Administration", "Enforcement", "Management", "Maintenance"))
+# Linear regression model with the specified predictors
+model2 <- lm(Cost_km ~ Protection_level + GDP_pc, data = maintenance1) # not enough data for this
+# View the summary of the model
+summary(model2)
+plot(model2)
+View(maintenance)
+```
+## Combining and dummy coding levels
+
+```{r}
+#using maintenance coded with subs 
+msubs <- read_csv("../Data/msubs.csv")
+#prepering data
+msubs = msubs |> mutate(Protection_level=factor(Protection_level))
+View(msubs)
+#exploratory model
+m1 <- lm(Cost_km ~ Protection_level + GDP_pc + Management +Administration+Enforcement, data=msubs)
+summary(m1)
+plot(m1)
+vif(m1)
+```
 
 
 
