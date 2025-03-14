@@ -434,24 +434,24 @@ tsubs |> ggplot(aes(x=Cost_class, y=Cost_km, fill=Protection_level)) +
              position =position_dodge(width = 0.75))
 
 # mean for each group and mads for each group for our priors
-esubs |> 
+tsubs |> 
   group_by(Protection_level, GDP_pc) |>  
   summarise(Median=median(log(Cost_km)), MAD=mad(log(Cost_km)))
 
 #model formula
-form1 = bf(Cost_km ~ scale(GDP_pc) + Protection_level, family=Gamma(link='log'))
+form2 = bf(Cost_km ~ scale(GDP_pc) + Protection_level + Management + Administration + Enforcement + Research + Planning + Community_outreach, family=Gamma(link='log'))
   
 #looking at priors needed
-get_prior(form1, esubs)
+get_prior(form2, tsubs)
 
 #setting my priors
 priors = prior(normal(0, 16), class='Intercept') +
   prior(normal(0,5), class='b') +
-  prior(gamma(5,5), class='shape')
+  prior(gamma(0.01,0.01), class='shape')
 
 # running the model with priors only
-esubs.brm1 = brm(form1, 
-               data=esubs, 
+tsubs.brm1 = brm(form2, 
+               data=tsubs, 
                prior=priors,
                sample_prior='only', 
                iter= 5000, 
@@ -464,30 +464,57 @@ esubs.brm1 = brm(form1,
                backend = "cmdstanr")
 
 #making a conditional plot
-esubs.brm1 |>
+tsubs.brm1 |>
   conditional_effects() |> 
   plot(points=TRUE, ask=FALSE, plot=FALSE) |> 
   wrap_plots() &
   scale_y_log10()
 
 # running the model with both priors and data
-esubs.brm2 = esubs.brm1 |> 
+tsubs.brm2 = tsubs.brm1 |> 
   update(sample_prior = 'yes', refresh=0)
 
 #Assess priors and posteriors
-esubs.brm2 |> SUYR_prior_and_posterior()
+tsubs.brm2 |> SUYR_prior_and_posterior()
 
 ### MCMC sampling diagnostics
 #trace plot 
-esubs.brm2$fit |> stan_trace()
+tsubs.brm2$fit |> stan_trace()
 
 #border correlarion
-esubs.brm2$fit |> stan_ac()
+tsubs.brm2$fit |> stan_ac()
 
 #chain convergence
-esubs.brm2$fit |> stan_rhat()
+tsubs.brm2$fit |> stan_rhat()
 
 #effective sample size
-esubs.brm2$fit |> stan_ess() # there are no issues here
+tsubs.brm2$fit |> stan_ess() # there are no issues here
 
+## results for interpretation
+# generic summary 
+tsubs.brm2 |> summary() 
+
+#thorough
+tsubs.brm2 |> 
+  as_draws_df() |>  
+  #dplyr::select(matches("^b_.*")) |> 
+  exp() |> 
+  summarise_draws(median, 
+                  HDInterval::hdi,
+                  rhat, 
+                  ess_bulk,
+                  Pl=~mean(.x<1), 
+                  Pg=~mean(.x>1))
 ```
+
+
+
+
+
+
+
+
+
+
+
+
