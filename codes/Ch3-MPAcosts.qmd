@@ -183,11 +183,29 @@ ggplot(data=msubs, aes(x=GDP_pc, y=Cost_km)) +
   geom_point() +
   geom_smooth(method="lm") 
 
+#looking at distribution 
+#looking at the distribution for cost/km2
+hist(msubs$Cost_km, breaks=75)
+
 #boxplot
 msubs |> ggplot(aes(x=Cost_class, y=Cost_km, fill=Protection_level)) +
   geom_boxplot() +
   geom_point(aes(color=Protection_level), 
              position =position_dodge(width = 0.75))
+
+#plots with no outliers
+msubs_filtered <- msubs |> 
+  group_by(Cost_class) |> 
+  filter(
+    Cost_km >= quantile(Cost_km, 0.25) - 1.5 * IQR(Cost_km) &
+    Cost_km <= quantile(Cost_km, 0.75) + 1.5 * IQR(Cost_km)
+  ) |> 
+  ungroup()
+
+# Plot without outliers
+ggplot(msubs_filtered, aes(x = Cost_class, y = Cost_km, fill = Protection_level)) +
+  geom_boxplot() +
+  geom_point(aes(color = Protection_level), position = position_dodge(width = 0.75))
 
 ### Fit the model
 # mean for each group and mads for each group for our priors
@@ -263,6 +281,20 @@ testUniformity(msubs.resids)
 plotResiduals(msubs.resids, quantreg = TRUE)
 #red lines that there might be some trends occurring, because the line is high and it decreases. 
 #without lines we would have not noticed the trends
+
+# results
+msubs.brm2 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  exp() |> 
+  summarise_draws(median, 
+                  HDInterval::hdi,
+                  rhat, 
+                  ess_bulk,
+                  Pl=~mean(.x<1), 
+                  Pg=~mean(.x>1))
+
+
 ```
 
 ## Trying a Bayesian regression with Gamma distribution - establishment subs
@@ -276,12 +308,12 @@ esubs = esubs |> mutate(Protection_level=factor(Protection_level,
                                                 levels=c("Fully protected", "Partially protected")), # this will order them rather than going into alphabetical order 
                         Cost_class=factor(Cost_class, 
                                           levels=c("Establishment", "Research", "Planning", "Community outreach")),
-                        Community_outreach=factor(Community_outreach), 
-                                          #levels=c(0,1)), 
-                        Planning=factor(Planning), 
-                                          #levels=c(0,1)), 
-                        Research=factor(Research)) #, 
-                                          #levels=c(0,1)))
+                        Community_outreach=factor(Community_outreach, 
+                                          levels=c(0,1)), 
+                        Planning=factor(Planning, 
+                                          levels=c(0,1)), 
+                        Research=factor(Research, 
+                                          levels=c(0,1)))
 
 ## Data exploration to see what distribution I can use in the model
 #looking at distribution for costs/km2 divided by gdp class
@@ -303,11 +335,28 @@ ggplot(data=esubs, aes(x=GDP_pc, y=Cost_km)) +
   geom_point() +
   geom_smooth(method="lm") #decreasing trend
 
+# Calculate the IQR and filter out outliers
+esubs_filtered <- esubs |> 
+  group_by(Cost_class) |> 
+  filter(
+    Cost_km >= quantile(Cost_km, 0.25) - 1.5 * IQR(Cost_km) &
+    Cost_km <= quantile(Cost_km, 0.75) + 1.5 * IQR(Cost_km)
+  ) |> 
+  ungroup()
+
+# Plot without outliers
+ggplot(esubs_filtered, aes(x = Cost_class, y = Cost_km, fill = Protection_level)) +
+  geom_boxplot() +
+  geom_point(aes(color = Protection_level), position = position_dodge(width = 0.75))
+
 #boxplot
 esubs |> ggplot(aes(x=Cost_class, y=Cost_km, fill=Protection_level)) +
   geom_boxplot() +
   geom_point(aes(color=Protection_level), 
              position =position_dodge(width = 0.75))
+boxplot(Cost_km~Protection_level, data=esubs_filtered)
+#looking at the distribution for cost/km2
+hist(esubs_filtered$Cost_km, breaks=10)
 
 # mean for each group and mads for each group for our priors
 esubs |> 
@@ -380,6 +429,22 @@ testUniformity(esubs.resids)
 #check no patterns in the residuals 
 plotResiduals(esubs.resids, quantreg = TRUE)
 #something weird is going on here, not sure what is happening here
+
+#results
+# generic summary 
+esubs.brm2 |> summary() 
+
+#thorough
+esubs.brm2 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  exp() |> 
+  summarise_draws(median, 
+                  HDInterval::hdi,
+                  rhat, 
+                  ess_bulk,
+                  Pl=~mean(.x<1), 
+                  Pg=~mean(.x>1))
 
 ```
 
