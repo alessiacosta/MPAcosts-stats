@@ -585,6 +585,149 @@ tsubs.brm2 |>
 
 
 
+## Comparing maintenance costs with establishment costs 
+```{r}
+mesubs <- read_csv("../Data/mesubs.csv")
+#data preparation
+mesubs = mesubs |> mutate(Protection_level=factor(Protection_level, 
+                                                levels=c("Fully protected", "Partially protected")), # this will order them rather than going into alphabetical order 
+                        Management=factor(Management, 
+                                          levels=c(0,1)), 
+                        Administration=factor(Administration, 
+                                          levels=c(0,1)), 
+                        Enforcement=factor(Enforcement, 
+                                          levels=c(0,1)), 
+                        Establishment=factor(Establishment, 
+                                             levels=c(0,1)))
+#sourcing functions from Murray's github repository
+source('helperFunctions.R')
+#checking distribution 
+ggplot(data=mesubs, aes(x=Cost_km)) +
+  geom_boxplot()
+#checking for linearity -> equal variance (no relationship between mean and variance)
+ggplot(data=mesubs, aes(x=GDP_pc, y=Cost_km)) +
+  geom_point() +
+  geom_smooth()
+#better way for doing this and seeing a straight line in the data 
+ggplot(data=mesubs, aes(x=GDP_pc, y=Cost_km)) +
+  geom_point() +
+  geom_smooth(method="lm") 
+
+#looking at distribution 
+#looking at the distribution for cost/km2
+hist(mesubs$Cost_km, breaks=75)
+
+#boxplot
+mesubs |> ggplot(aes(x=Cost_class, y=Cost_km, fill=Protection_level)) +
+  geom_boxplot() +
+  geom_point(aes(color=Protection_level), 
+             position =position_dodge(width = 0.75))
+
+#plots with no outliers
+mesubs_filtered <- mesubs |> 
+  group_by(Cost_class) |> 
+  filter(
+    Cost_km >= quantile(Cost_km, 0.25) - 1.5 * IQR(Cost_km) &
+    Cost_km <= quantile(Cost_km, 0.75) + 1.5 * IQR(Cost_km)
+  ) |> 
+  ungroup()
+
+# Plot without outliers
+ggplot(msubs_filtered, aes(x = Cost_class, y = Cost_km, fill = Protection_level)) +
+  geom_boxplot() +
+  geom_point(aes(color = Protection_level), position = position_dodge(width = 0.75))
+
+### Fit the model
+# mean for each group and mads for each group for our priors
+View(mesubs)
+mesubs_filtered |> 
+  group_by(Protection_level, Administration, Management, Enforcement, GDP_pc, Establishment) |>  
+  summarise(Median=median(log(Cost_km)), MAD=mad(log(Cost_km)))
+
+#setting priors
+priors = prior(normal(0, 7), class='Intercept') +
+  prior(normal(0,5), class='b') +
+  prior(gamma(0.1,0.1), class='shape')
+
+#model formula
+form = bf(Cost_km ~ scale(GDP_pc) + Protection_level + Management + Administration + Enforcement + Establishment, family=Gamma(link='log'))
+default_prior(form, data=mesubs)
+#getting standard priors
+get_prior(form, data=mesubs)
+
+# running the model with priors only
+mesubs.brm1 = brm(form, 
+               data=mesubs, 
+               prior=priors,
+               sample_prior='only', 
+               iter= 5000, 
+               warmup = 1000, 
+               chains=3, 
+               cores = 3, 
+               thin=5, 
+               refresh=0, 
+               seed=1, 
+               backend = "cmdstanr")
+
+#making a conditional plot
+mesubs.brm1 |>
+  conditional_effects() |> 
+  plot(points=TRUE, ask=FALSE, plot=FALSE) |> 
+  wrap_plots() &
+  scale_y_log10()
+
+# running the model with both priors and data
+mesubs.brm2 = mesubs.brm1 |> 
+  update(sample_prior = 'yes', refresh=0)
+
+#Assess priors and posteriors
+mesubs.brm2 |> SUYR_prior_and_posterior()
+
+### MCMC sampling diagnostics
+#trace plot 
+mesubs.brm2$fit |> stan_trace()
+
+#border correlarion
+mesubs.brm2$fit |> stan_ac()
+
+#chain convergence
+mesubs.brm2$fit |> stan_rhat()
+
+#effective sample size
+mesubs.brm2$fit |> stan_ess() # there are no issues here
+
+### Model validation
+
+#probability check
+mesubs.brm2 |> pp_check(type='dens_overlay', ndraws=100)
+#not the best fit it could be 
+
+#sim residuals 
+mesubs.resids  = make_brms_dharma_res(mesubs.brm2, integerResponse= TRUE)
+testUniformity(msubs.resids)
+#simulated residuals are not too bad, acceptable
+
+#check no patterns in the residuals 
+plotResiduals(mesubs.resids, quantreg = TRUE)
+#red lines that there might be some trends occurring, because the line is high and it decreases. 
+#without lines we would have not noticed the trends
+
+# results
+mesubs.brm2 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  exp() |> 
+  summarise_draws(median, 
+                  HDInterval::hdi,
+                  rhat, 
+                  ess_bulk,
+                  Pl=~mean(.x<1), 
+                  Pg=~mean(.x>1))
+
+
+```
+```
+
 
 
 
