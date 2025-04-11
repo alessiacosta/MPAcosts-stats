@@ -2,7 +2,7 @@
 title: "Ch3-MPAcosts"
 ---
 
-# Loading packages needed fro the project
+# Loading packages needed for the project
 
 ```{r}
 library(readr)
@@ -37,8 +37,8 @@ library(geoR)
 source('helperFunctions.R')
 ```
 
-# Making a map of the MPAs I found data for
 
+# Making a map of the MPAs found in 
 ## Loading the map data
 
 ```{r}
@@ -47,7 +47,6 @@ fig1 <- read_csv("../Data/fig1.csv")
 ```
 
 ## Making global map with my data
-
 ```{r}
 # Get world map data
 world <- ne_countries(scale = "medium", returnclass = "sf")
@@ -84,94 +83,9 @@ dev.off()
 
 # Statistics
 
-### Loading the data
-
-```{r}
-#loading the data
-data <- read_csv("../Data/ch3data.csv")
-View(data)
-#setting up the data
-data = data |> mutate(Protection_level=factor(Protection_level))
-```
-
-### Data exploration
-
-```{r}
-#looking at distribution for costs/km2 divided by gdp class
-boxplot(Cost_km~GDP_class, data=data)
-#looking at the distribution for cost/km2
-hist(data$Cost_km, breaks=60)
-#distribution of total costs 
-hist(data$'2024_AUD', breaks=60)
-#looking at the distribution of costs/km2 divided by cost category
-boxplot(Cost_km~Protection_level, data=data)
-```
-
-### Making exploratory models
-
-```{r}
-#model
-# Linear regression model with the specified predictors
-model <- lm(Cost_km ~ Protection_level + GDP_pc, data = data)
-
-# View the summary of the model
-summary(model)
-vif(model)
-
-#plot
-plot(model)
-
-# Plot the residuals to check for normality (Gaussian distribution)
-#par(mfrow = c(1, 2))  # Set up a 2-panel plot
-#plot(model$fitted.values, model$residuals, main = "Residuals vs Fitted", xlab = "Fitted Values", ylab = "Residuals")
-#hist(model$residuals, breaks = 30, main = "Histogram of Residuals", xlab = "Residuals", col = "lightblue", border = "black")
-
-#filtering data based on: establishment, maintenance and compliance
-establishment = filter(data, Cost_class == "Establishment")
-# Linear regression model with the specified predictors
-model1 <- lm(Cost_km ~ Protection_level + GDP_pc, data = establishment)
-# View the summary of the model
-summary(model1)
-plot(model1)
-View(establishment)
-
-#filtering data based on: establishment, maintenance and compliance
-maintenance = filter(data, Cost_class == "Maintenance") # see notes this is not displaying all the maintenance data I have 
-#maintenance1 = filter(data, Cost_class %in% c("Administration", "Enforcement", "Management", "Maintenance"))
-# Linear regression model with the specified predictors
-model2 <- lm(Cost_km ~ Protection_level + GDP_pc, data = maintenance1) # not enough data for this
-# View the summary of the model
-summary(model2)
-plot(model2)
-View(maintenance)
-```
-
-### Combining and dummy coding levels
-
-```{r}
-#using maintenance coded with subs 
-msubs <- read_csv("../Data/msubs.csv")
-#preparing data
-msubs = msubs |> mutate(Protection_level=factor(Protection_level, 
-                                                levels=c("Fully protected", "Partially protected")), # this will order them rather than going into alphabetical order 
-                        Cost_class=factor(Cost_class, 
-                                          levels=c("Maintenance", "Administration", "Enforcement", "Management")),
-                        Management=factor(Management, 
-                                          levels=c(0,1)), 
-                        Administration=factor(Administration, 
-                                              levels=c(0,1)), 
-                        Enforcement=factor(Enforcement, 
-                                           levels=c(0,1)))
-View(msubs)
-#exploratory model
-m1 <- lm(Cost_km ~ Protection_level + GDP_pc + Management + Administration + Enforcement, data=msubs)
-summary(m1)
-plot(m1)
-vif(m1)
-```
-
 ## Bayesian regression with Gamma distribution - establishment subs
-#### Data preparation 
+
+#### Data preparation
 ```{r}
 #importing establishment data
 esubs <- read_csv("../Data/esubs.csv")
@@ -185,13 +99,10 @@ esubs = esubs |>
   mutate(Protection_level=factor(Protection_level, 
                                                 levels=c("Fully protected", "Partially protected")), 
          ID=factor(ID)) # this will order them rather than going into alphabetical order 
-#esubs <- within(esubs, {
-    #csize <- as.numeric(scale(Size, scale = FALSE))
-    #cgdp <- as.numeric(scale(GDP_pc, scale = FALSE))
-#})
 View(esubs)
 ```
-#### Exploratory data analysis 
+
+#### Exploratory data analysis
 ```{r}
 ## Data exploration to see what distribution I can use in the model
 #looking at distribution for costs/km2 divided by gdp classc
@@ -224,7 +135,8 @@ esubs |> ggplot(aes(y=Cost_km, x=Years)) +
   facet_wrap(~ID)
 
 ```
-#### Fit the model 
+
+#### Fit the model
 ```{r}
 #starting setting up the model
 #model formula
@@ -283,9 +195,9 @@ esubs.brm2 |>
   scale_y_log10()
 #priors are not influential but there is very little data
 ```
+
 #### MCMC sampling diagnostics
 ```{r}
-### MCMC sampling diagnostics
 #trace plot 
 esubs.brm2$fit |> stan_trace()
 
@@ -305,6 +217,7 @@ esubs.brm2$fit |> stan_dens(separate_chains=TRUE)
 #this plot is good if we have high hats 
 
 ```
+
 #### Model validation
 ```{r}
 #probability check
@@ -336,6 +249,7 @@ plotResiduals(esubs.resids, quantreg = TRUE)
 #autocor_check(esubs, esubs.brm2, variable = "Years", n.sim=250)
 #I do not think I need to check for autocorrelation with this data as it is not sampling data over time
 ```
+
 #### Results
 ```{r}
 # generic summary 
@@ -359,7 +273,8 @@ esubs.brm2 |>
 esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 #we are explaining 40% of the variance with this model -  which should be a pretty good fit for the model
 ```
-#### Plot results - predictions 
+
+#### Plot results - predictions
 ```{r}
 #making sure the Nas are removed from teh raw data
 esubs_clean <- esubs |> 
@@ -432,8 +347,9 @@ ggplot(newdata1, aes(y = response, x = Years)) +
 ```
 
 
-## Bayesian distribution with Gamma distribution - maintenance 
+## Bayesian distribution with Gamma distribution - maintenance
 
+#### Data preparation
 ```{r}
 #using maintenance coded with subs 
 msubs <- read_csv("../Data/msubs.csv")
@@ -444,65 +360,63 @@ msubs = msubs |> mutate(Protection_level=factor(Protection_level,
                         Cost_class=factor(Cost_class, 
                                           levels=c("Maintenance", "Administration", "Enforcement", "Management")),
                         Management=factor(Management, 
-                                          levels=c(0,1)), 
+                                          levels=c(1,0)), 
                         Administration=factor(Administration, 
-                                              levels=c(0,1)), 
+                                              levels=c(1,0)), 
                         Enforcement=factor(Enforcement, 
-                                           levels=c(0,1)))
-#checking distribution 
-ggplot(data=msubs, aes(x=Tcost)) +
-  geom_boxplot()
-#checking for linearity -> equal variance (no relationship between mean and variance)
-ggplot(data=msubs_filtered, aes(x=log(Size), y=Tcost)) +
-  geom_point() +
-  geom_smooth()
-#better way for doing this and seeing a straight line in the data 
-ggplot(data=msubs, aes(x=Size, y=Cost_km)) +
-  geom_point() +
-  geom_smooth(method="lm") 
+                                           levels=c(1,0)), 
+                        ID=factor(ID))
+```
 
-#looking at distribution 
-#looking at the distribution for cost/km2
-hist(msubs$Cost_km, breaks=75)
-
-#boxplot
-msubs |> ggplot(aes(x=Cost_class, y=Cost_km, fill=Protection_level)) +
-  geom_boxplot() +
-  geom_point(aes(color=Protection_level), 
-             position =position_dodge(width = 0.75))
-
-#plots with no outliers
-msubs_filtered <- msubs |> 
-  group_by(Cost_class) |> 
-  filter(
-    Cost_km >= quantile(Tcost, 0.25) - 1.5 * IQR(Tcost) &
-    Cost_km <= quantile(Tcost, 0.75) + 1.5 * IQR(Tcost)
-  ) |> 
-  ungroup()
-
-
-# Plot without outliers
-ggplot(msubs_filtered, aes(x = Cost_class, y = Tcost, fill = Protection_level)) +
-  geom_boxplot() +
-  geom_point(aes(color = Protection_level), position = position_dodge(width = 0.75))
-
-### Fit the model
-# mean for each group and mads for each group for our priors
+#### Exploratory data analysis
+```{r}
 View(msubs)
+## Data exploration to see what distribution I can use in the model
+#looking at distribution for costs/km2 divided by gdp classc
+msubs |> ggplot(aes(y=Cost_km)) +
+  geom_boxplot()
+#making an histogram 
+msubs |> ggplot(aes(x=Cost_km)) +
+  geom_histogram()
+
+#logging the data before producing the histgram 
+msubs |> ggplot(aes(x=log(Cost_km))) +
+  geom_histogram()
+
+#logging the axis
+msubs |> ggplot(aes(x=Cost_km)) +
+  geom_histogram() +
+  scale_x_log10()
+#preferable to change the axis scale and not change the data, in case of raw data it does not make much difference
+
+#checking for linearity 
+msubs |> ggplot(aes(y=Cost_km, x=Size)) +
+  geom_point() +
+  geom_line(aes(group=ID))
+# need this to be more clear to see what whether there are patterns
+
+#making a facet 
+esubs |> ggplot(aes(y=Cost_km, x=Size)) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  facet_wrap(~Protection_level)
+```
+
+#### Fit the model
+```{r}
+#model formula
+form = bf(Cost_km ~ scale(Size) + Management + Administration + Enforcement + Protection_level, family=Gamma(link='log'))
+# mean for each group and mads for each group for our priors
 msubs |> 
-  group_by(Protection_level, Administration, Management, Enforcement, Size) |>  
   summarise(Median=median(log(Cost_km)), MAD=mad(log(Cost_km)))
 
-#setting priors
-priors = prior(normal(0, 7), class='Intercept') +
-  prior(normal(0,5), class='b') +
-  prior(gamma(0.1,0.1), class='shape')
-
-#model formula
-form = bf(Tcost ~ scale(Size) + Protection_level + Management + Administration + Enforcement, family=Gamma(link='log'))
-default_prior(form, data=msubs)
 #getting standard priors
 get_prior(form, data=msubs)
+
+#setting priors
+priors = prior(normal(8, 3), class='Intercept') +
+  prior(normal(0,3), class='b') +
+  prior(gamma(0.1,0.1), class='shape')
 
 # running the model with priors only
 msubs.brm1 = brm(form, 
@@ -532,7 +446,17 @@ msubs.brm2 = msubs.brm1 |>
 #Assess priors and posteriors
 msubs.brm2 |> SUYR_prior_and_posterior()
 
-### MCMC sampling diagnostics
+#Produce the same conditional plot but with the posteriors
+msubs.brm2 |>
+  conditional_effects() |> 
+  plot(points=TRUE) |> 
+  wrap_plots() &
+  scale_y_log10()
+#priors are not influential but there is very little data
+```
+
+#### MCMC sampling diagnostics
+```{r}
 #trace plot 
 msubs.brm2$fit |> stan_trace()
 
@@ -545,8 +469,13 @@ msubs.brm2$fit |> stan_rhat()
 #effective sample size
 msubs.brm2$fit |> stan_ess() # there are no issues here
 
-### Model validation
+#check the densities
+esubs.brm2$fit |> stan_dens(separate_chains=TRUE)
+#this plot is good if we have high hats 
+```
 
+#### Model validation
+```{r}
 #probability check
 msubs.brm2 |> pp_check(type='dens_overlay', ndraws=100)
 #not the best fit it could be 
@@ -560,8 +489,14 @@ testUniformity(msubs.resids)
 plotResiduals(msubs.resids, quantreg = TRUE)
 #red lines that there might be some trends occurring, because the line is high and it decreases. 
 #without lines we would have not noticed the trends
+```
 
-# results
+#### Results
+```{r}
+# generic summary 
+msubs.brm2 |> summary() 
+
+#thorough results
 msubs.brm2 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
@@ -573,17 +508,12 @@ msubs.brm2 |>
                   Pl=~mean(.x<1), 
                   Pg=~mean(.x>1))
 
+#Paritally protected (1-0.062)*100= 3% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
+#the amount of variability explained by the model -quasi R sqaured
+msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
+#we are explaining 10% of the variance with this model -  which should be a pretty good fit for the model
 ```
-
-
-
-
-
-
-
-
-
 
 
 
