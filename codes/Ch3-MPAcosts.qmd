@@ -3,7 +3,6 @@ title: "Ch3-MPAcosts"
 ---
 
 # Loading packages needed for the project
-
 ```{r}
 library(readr)
 library(ggplot2)
@@ -276,60 +275,25 @@ esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 
 #### Plot results - predictions
 ```{r}
-#making sure the Nas are removed from teh raw data
-esubs_clean <- esubs |> 
-  filter(!is.na(Years))
+# Filter out NAs in the relevant columns
+esubs_clean_size <- esubs |> 
+  filter(!is.na(Size), !is.na(Years), !is.na(Protection_level))
 
-#with years
-esubs.list = with(esubs_clean, list(Size=c(min(Size), mean(Size), max(Size))))
-#looking at order of magnitude
-esubs.brm2 |> 
-  emmeans(~Protection_level|Size, at =esubs.list, type="response") |> 
-  pairs()
-#there is not much of effect between grazing 1 and 2, 1 and 3, 1 and 4. effect of grazing becomes smaller as habiata area declines. At larger areas, it is similar to what is for the average, but less important 
-esubs.list = with(esubs_clean, list(Size=c(min(Size), mean(Size), max(Size), len=100)))
-newdata = emmeans(esubs.brm2, ~Size|Protection_level, at=esubs.list, type='response') |> 
-  as.data.frame()
-#plot prediction
-ggplot(newdata, aes(y=response, x=Size)) +
-  geom_ribbon(aes(ymin=lower.HPD, ymax=upper.HPD, fill=Protection_level), alpha=0.3) +
-  geom_line(aes(color=Protection_level))+
-  theme_bw()+
-  scale_x_log10() +
+# Generate prediction data
+pred_size <- emmeans(
+  esubs.brm2,
+  ~ Size | Protection_level,
+  at = list(Size = seq(min(esubs_clean_size$Size), max(esubs_clean_size$Size), length.out = 100),
+            Years = mean(esubs_clean_size$Years, na.rm = TRUE)),
+  type = "response"
+) |> as.data.frame()
+
+#producing a predicted ggplot
+esize = ggplot(pred_size, aes(x = Size, y = response, color = Protection_level, fill = Protection_level)) +
+  geom_line(size = 0.8) +  # thinner line
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   scale_y_log10() +
-    scale_fill_manual(
-    name = "Protection status",
-    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
-    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
-  ) +
-  scale_color_manual(
-    name = "Protection status",
-    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
-    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
-  ) +
-  labs(
-    x = "Total size of the MPA (km2)",
-    y = "Establishment cost/km²"
-  )
-
-
-#with years
-esubs.list1 = with(esubs_clean, list(Years=c(min(Years), mean(Years), max(Years))))
-#looking at order of magnitude
-esubs.brm2 |> 
-  emmeans(~Protection_level|Years, at =esubs.list, type="response") |> 
-  pairs()
-#there is not much of effect between grazing 1 and 2, 1 and 3, 1 and 4. effect of grazing becomes smaller as habiata area declines. At larger areas, it is similar to what is for the average, but less important 
-esubs.list1 = with(esubs_clean, list(Years=c(min(Years), mean(Years), max(Years), len=30)))
-newdata1 = emmeans(esubs.brm2, ~Years|Protection_level, at=esubs.list1, type='response') |> 
-  as.data.frame()
-#plot prediction
-ggplot(newdata1, aes(y = response, x = Years)) +
-  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD, fill = Protection_level), alpha = 0.3) +
-  geom_line(aes(color = Protection_level)) +
   theme_bw() +
-  scale_x_log10() +
-  scale_y_log10() +
   scale_fill_manual(
     name = "Protection status",
     values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
@@ -341,8 +305,38 @@ ggplot(newdata1, aes(y = response, x = Years)) +
     labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
   ) +
   labs(
-    x = "Number of establishment years",
+    x = "Size (km2)",
     y = "Establishment cost/km²"
+  )
+
+# Generate prediction data
+pred_size1 <- emmeans(
+  esubs.brm2,
+  ~ Years | Protection_level,
+  at = list(Years = seq(min(esubs_clean_size$Years), max(esubs_clean_size$Years), length.out = 100),
+            Size = mean(esubs_clean_size$Size, na.rm = TRUE)),
+  type = "response"
+) |> as.data.frame()
+
+#plot prediction
+ ggplot(pred_size1, aes(x = Years, y = response, color = Protection_level, fill = Protection_level)) +
+  geom_line(size = 0.8) +  # thinner line
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+  scale_y_log10() +
+  theme_bw() +
+  labs(
+    x = "Establishment years",
+    y = "Estimated cost per km²"
+  ) +
+  scale_fill_manual(
+    name = "Protection status",
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
+    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
+  ) +
+  scale_color_manual(
+    name = "Protection status",
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
+    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
   )
 ```
 
@@ -521,5 +515,51 @@ msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 
 
 
+
+
+
+
+#### Plot results - predictions
+```{r}
+#prediction of the maintenance costs/km2 per year
+pred_size <- emmeans(
+  msubs.brm2,
+  ~ Size | Protection_level,
+  at = list(
+    Size = seq(min(msubs$Size), max(msubs$Size), length.out = 100),
+    Management = levels(msubs$Management)[1],       # fix to first level
+    Administration = levels(msubs$Administration)[1],
+    Enforcement = levels(msubs$Enforcement)[1]),
+  type = "response") |> 
+  as.data.frame()
+
+#prediction plot
+msize = ggplot(pred_size, aes(x = Size, y = response, color = Protection_level, fill = Protection_level)) +
+  geom_line(size = 0.8) +
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+  scale_y_log10() +
+  theme_bw() +
+  labs(
+    x = "Size (km²)",
+    y = "Maintenance cost/km² p.a.") +
+  scale_fill_manual(
+    name = "Protection status",
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
+    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
+  ) +
+  scale_color_manual(
+    name = "Protection status",
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
+    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
+  )
+
+```
+
+#### combining plots
+```{r}
+png("combined_cost_plot.png", width = 2000, height = 800, res = 300)  # adjust as needed
+esize + msize + plot_layout(guides = 'collect')
+dev.off()
+```
 
 
