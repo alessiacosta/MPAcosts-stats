@@ -38,7 +38,7 @@ source('helperFunctions.R')
 ```
 
 
-# Making a map of the MPAs found in 
+# Making a map of the MPAs found
 ## Loading the map data
 
 ```{r}
@@ -81,9 +81,10 @@ dev.off()
 ```
 
 
+
 # Statistics
 
-## Bayesian regression with Gamma distribution - establishment subs
+## Bayesian regression with Gamma distribution - establishment
 
 #### Data preparation
 ```{r}
@@ -104,7 +105,7 @@ esubs = esubs |>
 
 #### Exploratory data analysis
 ```{r}
-## Data exploration to see what distribution I can use in the model
+# Data exploration to see what distribution I can use in the model
 #looking at distribution for costs/km2 divided by gdp classc
 esubs |> ggplot(aes(y=Cost_km)) +
   geom_boxplot()
@@ -295,6 +296,7 @@ esize = ggplot(pred_size, aes(x = Size, y = response, color = Protection_level, 
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   scale_y_log10() +
   theme_bw() +
+  theme(text = element_text(family = "serif")) +
   scale_fill_manual(
     name = "Protection status",
     values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
@@ -320,11 +322,12 @@ pred_size1 <- emmeans(
 ) |> as.data.frame()
 
 #plot prediction
- ggplot(pred_size1, aes(x = Years, y = response, color = Protection_level, fill = Protection_level)) +
+ eyears = ggplot(pred_size1, aes(x = Years, y = response, color = Protection_level, fill = Protection_level)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   scale_y_log10() +
   theme_bw() +
+   theme(text = element_text(family = "serif")) +
   labs(
     x = "Establishment years",
     y = "Estimated cost per km²"
@@ -344,7 +347,10 @@ pred_size1 <- emmeans(
 
 
 
-## Bayesian distribution with Gamma distribution - maintenance
+
+
+
+## Bayesian regression with Gamma distribution - maintenance with subs
 
 #### Data preparation
 ```{r}
@@ -367,7 +373,7 @@ msubs = msubs |> mutate(Protection_level=factor(Protection_level,
 
 #### Exploratory data analysis
 ```{r}
-View(msubs)
+#View(msubs)
 ## Data exploration to see what distribution I can use in the model
 #looking at distribution for costs/km2 divided by gdp classc
 msubs |> ggplot(aes(y=Cost_km)) +
@@ -542,6 +548,7 @@ msize = ggplot(pred_size2, aes(x = Size, y = response, color = Protection_level,
   scale_y_log10(labels = label_scientific()) +
   scale_x_continuous(labels = label_scientific()) +  # Scientific notation on x-axis
   theme_bw() +
+  theme(text = element_text(family = "serif")) +
   labs(
     x = "Size (km²)",
     y = "Maintenance cost/km² p.a.") +
@@ -559,9 +566,17 @@ msize = ggplot(pred_size2, aes(x = Size, y = response, color = Protection_level,
 ```
 
 
+
+
+
+
+
+## Summary plots
 ### Combining plots
+
+##### Prediction of costs/km2 with change in size
 ```{r}
-#hypothesis 1
+#hypothesis 1 
 # Average response at each Size value for maintenance
 pred_maint <- pred_size2 |> 
   group_by(Size) |> 
@@ -592,6 +607,7 @@ ggplot(pred_combined, aes(x = Size, y = response, color = type, fill = type)) +
   scale_x_continuous(labels = label_scientific()) +
   scale_y_log10(labels = label_scientific()) +
   theme_bw() +
+  theme(text = element_text(family = "serif")) +
   labs(
     x = "Size (km²)",
     y = "Cost/km²",
@@ -603,11 +619,10 @@ ggplot(pred_combined, aes(x = Size, y = response, color = type, fill = type)) +
 dev.off()
 #the prediction becomes very close to zero because we are using a log link distribution but never negative --> this is fro when I am not logging 10 the y axis
 
-
 #hypothesis n 4
 png("h4.png", width = 2000, height = 800, res = 300)  # adjust as needed
-esize + msize + plot_layout(guides = 'collect')
+esize + msize + plot_layout(guides = 'collect') + 
+  plot_annotation(tag_levels = 'A') 
 dev.off()
 ```
-
 
