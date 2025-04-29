@@ -2,7 +2,9 @@
 title: "gpd stats"
 format: html
 ---
+
 # Loading packages needed for the project
+
 ```{r}
 library(readr)
 library(ggplot2)
@@ -37,9 +39,9 @@ library(scales)
 source('helperFunctions.R')
 ```
 
+# Data analysis
 
-## Bayesian regression with Gamma distribution - GDP per capita for establishment costs
-
+## Bayesian regression with Gamma distribution - GDP per capita for establishment costs with interaction
 #### Data preparation
 ```{r}
 #importing establishment data
@@ -57,7 +59,6 @@ esubs = esubs |>
 #View(esubs)
 ```
 
-
 #### Exploratory analysis
 ```{r}
 #checking for linearity 
@@ -67,33 +68,35 @@ esubs |> ggplot(aes(y=Cost_km, x=GDP_pc)) +
 # need this to be more clear to see what whether there are patterns
 
 #making a facet 
-esubs |> ggplot(aes(y=Cost_km, x=Years)) +
+esubs |> ggplot(aes(y=Cost_km, x=GDP_pc)) +
   geom_point() +
   geom_smooth(method="lm") +
   facet_wrap(~ID)
 ```
 
-
 #### Fit the model
 ```{r}
 #model formula
-form = bf(Cost_km ~ scale(GDP_pc), family=Gamma(link='log'))
+form.intge = bf(Cost_km ~ scale(GDP_pc) + scale(GDP_pc)*Protection_level, family=Gamma(link='log'))
 # mean for each group and mads for each group for our priors
+esubs <- esubs |> 
+  filter(!is.na(Size), !is.na(Years), !is.na(Protection_level))
+
 esubs |> 
   summarise(Median=median(log(Cost_km)), MAD=mad(log(Cost_km)))
 
 #getting standard priors
-get_prior(form, data=esubs)
+get_prior(form.intge, data=esubs)
 
 #setting priors
-priors = prior(normal(12, 4), class='Intercept') +
-  prior(normal(0,4), class='b') +
+priors.intge= prior(normal(10, 2.5), class='Intercept') +
+  prior(normal(0,2.5), class='b') +
   prior(gamma(0.1,0.1), class='shape')
 
 # running the model with priors only
-esubs.brm11 = brm(form, 
+esubs.brm.intge = brm(form.intge, 
                data=esubs, 
-               prior=priors,
+               prior=priors.intge,
                sample_prior='only', 
                iter= 5000, 
                warmup = 1000, 
@@ -105,21 +108,21 @@ esubs.brm11 = brm(form,
                backend = "cmdstanr")
 
 #making a conditional plot
-esubs.brm11 |>
+esubs.brm.intge |>
   conditional_effects() |> 
   plot(points=TRUE, ask=FALSE, plot=FALSE) |> 
   wrap_plots() &
   scale_y_log10()
 
 # running the model with both priors and data
-esubs.brm22 = esubs.brm11 |> 
+esubs.brm.intge1 = esubs.brm.intge |> 
   update(sample_prior = 'yes', refresh=0)
 
 #Assess priors and posteriors
-esubs.brm22 |> SUYR_prior_and_posterior()
+esubs.brm.intge1 |> SUYR_prior_and_posterior()
 
 #Produce the same conditional plot but with the posteriors
-esubs.brm22 |>
+esubs.brm.intge1 |>
   conditional_effects() |> 
   plot(points=TRUE) |> 
   wrap_plots() &
@@ -127,54 +130,51 @@ esubs.brm22 |>
 #priors are not influential but there is very little data
 ```
 
-
 #### MCMC sampling
 ```{r}
 #trace plot 
-esubs.brm22$fit |> stan_trace()
+esubs.brm.intge1$fit |> stan_trace()
 
 #border correlarion
-esubs.brm22$fit |> stan_ac()
+esubs.brm.intge1$fit |> stan_ac()
 
 #chain convergence
-esubs.brm22$fit |> stan_rhat()
+esubs.brm.intge1$fit |> stan_rhat()
 
 #effective sample size
-esubs.brm22$fit |> stan_ess() # there are no issues here
+esubs.brm.intge1$fit |> stan_ess() # there are no issues here
 
 #check the densities
-esubs.brm22$fit |> stan_dens(separate_chains=TRUE)
+esubs.brm.intge1$fit |> stan_dens(separate_chains=TRUE)
 #this plot is good if we have high hats 
 ```
-
 
 #### Model validation
 ```{r}
 #probability check
-esubs.brm22 |> pp_check(type='dens_overlay', ndraws=100) + 
+esubs.brm.intge1 |> pp_check(type='dens_overlay', ndraws=100) + 
   xlim(0, 5.0e+06)
 #not the best fit it could be 
 
 #sim residuals 
-esubs.resids1  = make_brms_dharma_res(esubs.brm22, integerResponse= TRUE)
-testUniformity(esubs.resids1)
+esubs.resids.intge  = make_brms_dharma_res(esubs.brm.intge1, integerResponse= TRUE)
+testUniformity(esubs.resids.intge)
 #simulated residuals are not too bad, acceptable - deviation n.s. means no significant deviation 
 
 #check no patterns in the residuals 
-plotResiduals(esubs.resids1, quantreg = TRUE)
+plotResiduals(esubs.resids.intge, quantreg = TRUE)
 #no issues here, looks half decent
 #the diagnostics look fine but we know we need to check other things based on the pp check
 ```
 
 
-
 #### Results
 ```{r}
 # generic summary 
-esubs.brm22 |> summary() 
+esubs.brm.intge1 |> summary() 
 
 #thorough results
-esubs.brm22 |> 
+esubs.brm.intge1 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   exp() |> 
@@ -188,14 +188,14 @@ esubs.brm22 |>
 #There is strong evidence 99% - Pl - ((1-0.2)*100) that we have a 80% decrease in cost_km for one unit increase in GDP per capita
 
 #the amount of variability explained by the model -quasi R sqaured
-esubs.brm22 |> bayes_R2(summary=FALSE) |> median_hdci()
+esubs.brm.intge1 |> bayes_R2(summary=FALSE) |> median_hdci()
 #we are explaining 10% of the variance with this model -  which should be a pretty good fit for the model
 ```
 
 
-
 #### Plot results - predictions
 ```{r}
+#Predictions plots with GDP per capita only for establishment costs
 # Filter out NAs in the relevant columns
 esubs_GDP <- esubs |> 
   filter(!is.na(GDP_pc))
@@ -203,7 +203,7 @@ esubs_GDP <- esubs |>
 gdp_seq <- seq(min(esubs_GDP$GDP_pc), max(esubs_GDP$GDP_pc), length.out = 100)
 # Use emmeans to get the predictions on the response scale
 pred_gdp <- emmeans(
-  esubs.brm22,
+  esubs.brm.intge1,
   ~ GDP_pc,
   at = list(GDP_pc = gdp_seq),
   type = "response"
@@ -211,7 +211,7 @@ pred_gdp <- emmeans(
   as.data.frame()
 
 #plot
-png("h5.png", width = 1400, height = 800, res = 300)
+#png("GDP_establishment.png", width = 1400, height = 800, res = 300)
 ggplot(pred_gdp, aes(x = GDP_pc, y = response)) +
   geom_line(color = "#0072B2", size = 1) +
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#0072B2", alpha = 0.2) +
@@ -222,15 +222,51 @@ ggplot(pred_gdp, aes(x = GDP_pc, y = response)) +
     y = "Establsihment cost/km²"
   ) +
   scale_y_log10()
-dev.off()
+#dev.off()
+```
+```{r}
+#Prediction plots with GDP per capita split by protection level - interaction plots
+# Filter out NAs in the relevant columns
+esubs_GDP <- esubs |> 
+  filter(!is.na(GDP_pc))
+
+# Use emmeans to get the predictions on the response scale
+pred_gdpe <- emmeans(
+  esubs.brm.intge1,
+  ~ GDP_pc | Protection_level,
+  at = list(GDP_pc = seq(min(esubs_GDP$GDP_pc), max(esubs_GDP$GDP_pc), length.out = 100)),
+  type = "response"
+) |> 
+  as.data.frame()
+
+#plot
+#png("interaction_establishment.png", width = 1400, height = 800, res = 300)
+int_est = ggplot(pred_gdpe, aes(x = GDP_pc, y = response, color = Protection_level, fill = Protection_level)) +
+  geom_line(size = 0.8) +  # thinner line
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+  scale_y_log10() +
+  theme_bw() +
+  theme(text = element_text(family = "serif")) +
+  scale_fill_manual(
+    name = "Protection status",
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
+    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
+  ) +
+  scale_color_manual(
+    name = "Protection status",
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
+    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
+  ) +
+  labs(
+    x = "GDP per capita (2023 USD)",
+    y = "Establishment cost/km²"
+  )
+#dev.off()
 ```
 
 
 
-
-
-
-## Bayesian regression with Gamma distribution - GDP per capita for maitenance costs
+## Bayesian regression with Gamma distribution - GDP per capita for maitenance costs with interaction
 
 #### Data preparation
 ```{r}
@@ -252,7 +288,6 @@ msubs = msubs |> mutate(Protection_level=factor(Protection_level,
 ```
 
 
-
 #### Exploratory analysis
 ```{r}
 #checking for linearity 
@@ -271,23 +306,23 @@ msubs |> ggplot(aes(y=Cost_km, x=GDP_pc)) +
 #### Fit the model
 ```{r}
 #model formula
-form = bf(Cost_km ~ scale(GDP_pc), family=Gamma(link='log'))
+form.intgm = bf(Cost_km ~ scale(GDP_pc) + scale(GDP_pc)*Protection_level, family=Gamma(link='log'))
 # mean for each group and mads for each group for our priors
 msubs |> 
   summarise(Median=median(log(Cost_km)), MAD=mad(log(Cost_km)))
 
 #getting standard priors
-get_prior(form, data=msubs)
+get_prior(form.intgm, data=msubs)
 
 #setting priors
-priors = prior(normal(8, 2.5), class='Intercept') +
+priors.intgm= prior(normal(8, 2.5), class='Intercept') +
   prior(normal(0,2.5), class='b') +
   prior(gamma(0.1,0.1), class='shape')
 
 # running the model with priors only
-msubs.brm11 = brm(form, 
+msubs.brm.intgm = brm(form.intgm, 
                data=msubs, 
-               prior=priors,
+               prior=priors.intgm,
                sample_prior='only', 
                iter= 5000, 
                warmup = 1000, 
@@ -299,21 +334,21 @@ msubs.brm11 = brm(form,
                backend = "cmdstanr")
 
 #making a conditional plot
-msubs.brm11 |>
+msubs.brm.intgm |>
   conditional_effects() |> 
   plot(points=TRUE, ask=FALSE, plot=FALSE) |> 
   wrap_plots() &
   scale_y_log10()
 
 # running the model with both priors and data
-msubs.brm22 = msubs.brm11 |> 
+msubs.brm.intgm1 = msubs.brm.intgm |> 
   update(sample_prior = 'yes', refresh=0)
 
 #Assess priors and posteriors
-msubs.brm22 |> SUYR_prior_and_posterior()
+msubs.brm.intgm1 |> SUYR_prior_and_posterior()
 
 #Produce the same conditional plot but with the posteriors
-msubs.brm22 |>
+msubs.brm.intgm1 |>
   conditional_effects() |> 
   plot(points=TRUE) |> 
   wrap_plots() &
@@ -324,36 +359,36 @@ msubs.brm22 |>
 #### MCMC sampling
 ```{r}
 #trace plot 
-msubs.brm22$fit |> stan_trace()
+msubs.brm.intgm1$fit |> stan_trace()
 
 #border correlarion
-msubs.brm22$fit |> stan_ac()
+msubs.brm.intgm1$fit |> stan_ac()
 
 #chain convergence
-msubs.brm22$fit |> stan_rhat()
+msubs.brm.intgm1$fit |> stan_rhat()
 
 #effective sample size
-msubs.brm22$fit |> stan_ess() # there are no issues here
+msubs.brm.intgm1$fit |> stan_ess() # there are no issues here
 
 #check the densities
-msubs.brm22$fit |> stan_dens(separate_chains=TRUE)
+msubs.brm.intgm1$fit |> stan_dens(separate_chains=TRUE)
 #this plot is good if we have high hats 
 ```
 
 #### Model validation
 ```{r}
 #probability check
-msubs.brm22 |> pp_check(type='dens_overlay', ndraws=100) + 
+msubs.brm.intgm1 |> pp_check(type='dens_overlay', ndraws=100) + 
   xlim(0, 5.0e+06)
 #not the best fit it could be 
 
 #sim residuals 
-msubs.resids1  = make_brms_dharma_res(msubs.brm22, integerResponse= TRUE)
-testUniformity(msubs.resids1)
+msubs.resids.intgm  = make_brms_dharma_res(msubs.brm.intgm1, integerResponse= TRUE)
+testUniformity(msubs.resids.intgm)
 #simulated residuals are not too bad, acceptable - deviation n.s. means no significant deviation 
 
 #check no patterns in the residuals 
-plotResiduals(msubs.resids1, quantreg = TRUE)
+plotResiduals(msubs.resids.intgm, quantreg = TRUE)
 #no issues here, looks half decent
 #the diagnostics look fine but we know we need to check other things based on the pp check
 ```
@@ -361,10 +396,10 @@ plotResiduals(msubs.resids1, quantreg = TRUE)
 #### Results
 ```{r}
 # generic summary 
-msubs.brm22 |> summary() 
+msubs.brm.intgm1 |> summary() 
 
 #thorough results
-msubs.brm22 |> 
+msubs.brm.intgm1 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   exp() |> 
@@ -378,28 +413,31 @@ msubs.brm22 |>
 #There is strong evidence 99% - Pl - ((1-0.2)*100) that we have a 80% decrease in cost_km for one unit increase in GDP per capita
 
 #the amount of variability explained by the model -quasi R sqaured
-msubs.brm22 |> bayes_R2(summary=FALSE) |> median_hdci()
+msubs.brm.intgm1 |> bayes_R2(summary=FALSE) |> median_hdci()
 #we are explaining 10% of the variance with this model -  which should be a pretty good fit for the model
 ```
+
 #### Plot results - predictions
 ```{r}
+#Predictions plots with GDP per capita only for maintenance costs
 # Filter out NAs in the relevant columns
 msubs_GDP <- msubs |> 
   filter(!is.na(GDP_pc))
 # Generate a sequence of GDP values to predict over
 gdp_seq1 <- seq(min(msubs_GDP$GDP_pc), max(msubs_GDP$GDP_pc), length.out = 100)
 # Use emmeans to get the predictions on the response scale
-pred_gdp1 <- emmeans(
-  msubs.brm22,
+pred_gdp0 <- emmeans(
+  msubs.brm.intgm1,
   ~ GDP_pc,
   at = list(GDP_pc = gdp_seq1),
   type = "response"
 ) |> 
   as.data.frame()
 
+
 #plot
-png("h6.png", width = 1400, height = 800, res = 300)
-ggplot(pred_gdp1, aes(x = GDP_pc, y = response)) +
+#png("GDP_maitenance.png", width = 1400, height = 800, res = 300)
+ggplot(pred_gdp0, aes(x = GDP_pc, y = response)) +
   geom_line(color = "#0072B2", size = 1) +
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#0072B2", alpha = 0.2) +
   theme_bw() +
@@ -409,22 +447,55 @@ ggplot(pred_gdp1, aes(x = GDP_pc, y = response)) +
     y = "Maintenance cost/km²"
   ) +
   scale_y_log10()
+#dev.off()
+```
+
+```{r}
+#Prediction plots with GDP per capita split by protection level - interaction plots
+# Filter out NAs in the relevant columns
+msubs_GDP <- msubs |> 
+  filter(!is.na(GDP_pc))
+
+# Use emmeans to get the predictions on the response scale
+pred_gdp3 <- emmeans(
+  msubs.brm.intgm1,
+  ~ GDP_pc | Protection_level,
+  at = list(GDP_pc = seq(min(msubs_GDP$GDP_pc), max(msubs_GDP$GDP_pc), length.out = 100)),
+  type = "response"
+) |> 
+  as.data.frame()
+
+#plot
+png("interaction-maitenance.png", width = 1400, height = 800, res = 300)
+int_man =ggplot(pred_gdp3, aes(x = GDP_pc, y = response, color = Protection_level, fill = Protection_level)) +
+  geom_line(size = 0.8) +  # thinner line
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+  scale_y_log10() +
+  theme_bw() +
+  theme(text = element_text(family = "serif")) +
+  scale_fill_manual(
+    name = "Protection status",
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
+    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
+  ) +
+  scale_color_manual(
+    name = "Protection status",
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
+    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
+  ) +
+  labs(
+    x = "GDP per capita (2023 USD)",
+    y = "Maitenance cost/km² p.a."
+  )
 dev.off()
 ```
 
 
-
-
-
-
-
-
-
-### Combining plots 
-#### Prediction of costs/km2 with change in GPD per capita
+### Combining interaction plots
 ```{r}
+#Combining GDP plots for establishment and maintenance costs
 # Average response at each Size value for maintenance
-pred_maint1 <- pred_gdp1 |> 
+pred_maintg1 <- pred_gdp1 |> 
   group_by(GDP_pc) |> 
   summarise(
     response = mean(response),
@@ -432,7 +503,7 @@ pred_maint1 <- pred_gdp1 |>
     upper.HPD = mean(upper.HPD)
   )
 # Establishment cost prediction
-pred_estab1 <- pred_gdp |> 
+pred_estabg1 <- pred_gdp |> 
   group_by(GDP_pc) |> 
   summarise(
     response = mean(response),
@@ -440,20 +511,25 @@ pred_estab1 <- pred_gdp |>
     upper.HPD = mean(upper.HPD)
   )
 #adding 'type' so I can assign different colors to them 
-pred_maint1$type <- "Maintenance"
-pred_estab1$type <- "Establishment"
+pred_maintg1$type <- "Maintenance"
+pred_estabg1$type <- "Establishment"
 #combine the two into one dataframe
-pred_combined1 <- bind_rows(pred_maint1, pred_estab1)
+pred_combined1 <- bind_rows(pred_maintg1, pred_estabg1)
 
 # Plot
-png("h0.png", width = 1400, height = 800, res = 300)
-ggplot(pred_combined1, aes(x = GDP_pc, y = response, color = type, fill = type)) +
+png("GDP_combined.png", width = 1400, height = 800, res = 300)
+combined = ggplot(pred_combined1, aes(x = GDP_pc, y = response, color = type, fill = type)) +
   geom_line(size = 0.8) +
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   scale_x_continuous(labels = label_scientific()) +
   scale_y_log10(labels = label_scientific()) +
   theme_bw() +
-  theme(text = element_text(family = "serif")) +
+  theme(
+    text = element_text(family = "serif"),
+    legend.position = c(0.95, 0.98),  # Top right corner
+    legend.justification = c("right", "top"),  # Anchor to top right
+    legend.background = element_rect(fill = "transparent", color = NA)
+  ) +
   labs(
     x = "GDP per capita (2023 USD)",
     y = "Cost/km²",
@@ -465,180 +541,13 @@ ggplot(pred_combined1, aes(x = GDP_pc, y = response, color = type, fill = type))
 dev.off()
 ```
 
-
-
-## Bayesian regression with Gamma distribution - GDP per capita for maitenance costs with interaction 
-
-#### Data preparation 
-Not needed because the dataset is the same as first model
-
-#### Exploratory analysis
 ```{r}
-#checking for linearity 
-msubs |> ggplot(aes(y=Cost_km, x=GDP_pc)) +
-  geom_point() +
-  geom_line(aes(group=ID))
-# need this to be more clear to see what whether there are patterns
-
-#making a facet 
-msubs |> ggplot(aes(y=Cost_km, x=GDP_pc)) +
-  geom_point() +
-  geom_smooth(method="lm") +
-  facet_wrap(~ID)
-```
-
-#### Fit the model
-```{r}
-#model formula
-form = bf(Cost_km ~ scale(GDP_pc)*Protection_level, family=Gamma(link='log'))
-# mean for each group and mads for each group for our priors
-msubs |> 
-  summarise(Median=median(log(Cost_km)), MAD=mad(log(Cost_km)))
-
-#getting standard priors
-get_prior(form, data=msubs)
-
-#setting priors
-priors = prior(normal(8, 2.5), class='Intercept') +
-  prior(normal(0,2.5), class='b') +
-  prior(gamma(0.1,0.1), class='shape')
-
-# running the model with priors only
-msubs.brm111 = brm(form, 
-               data=msubs, 
-               prior=priors,
-               sample_prior='only', 
-               iter= 5000, 
-               warmup = 1000, 
-               chains=3, 
-               cores = 3, 
-               thin=5, 
-               refresh=0, 
-               seed=1, 
-               backend = "cmdstanr")
-
-#making a conditional plot
-msubs.brm111 |>
-  conditional_effects() |> 
-  plot(points=TRUE, ask=FALSE, plot=FALSE) |> 
-  wrap_plots() &
-  scale_y_log10()
-
-# running the model with both priors and data
-msubs.brm222 = msubs.brm111 |> 
-  update(sample_prior = 'yes', refresh=0)
-
-#Assess priors and posteriors
-msubs.brm222 |> SUYR_prior_and_posterior()
-
-#Produce the same conditional plot but with the posteriors
-msubs.brm222 |>
-  conditional_effects() |> 
-  plot(points=TRUE) |> 
-  wrap_plots() &
-  scale_y_log10()
-#priors are not influential but there is very little data
-```
-
-#### MCMC sampling
-```{r}
-#trace plot 
-msubs.brm222$fit |> stan_trace()
-
-#border correlarion
-msubs.brm222$fit |> stan_ac()
-
-#chain convergence
-msubs.brm222$fit |> stan_rhat()
-
-#effective sample size
-msubs.brm222$fit |> stan_ess() # there are no issues here
-
-#check the densities
-msubs.brm222$fit |> stan_dens(separate_chains=TRUE)
-#this plot is good if we have high hats 
-```
-
-#### Model validation
-```{r}
-#probability check
-msubs.brm222 |> pp_check(type='dens_overlay', ndraws=100) + 
-  xlim(0, 5.0e+06)
-#not the best fit it could be 
-
-#sim residuals 
-msubs.resids11  = make_brms_dharma_res(msubs.brm222, integerResponse= TRUE)
-testUniformity(msubs.resids11)
-#simulated residuals are not too bad, acceptable - deviation n.s. means no significant deviation 
-
-#check no patterns in the residuals 
-plotResiduals(msubs.resids11, quantreg = TRUE)
-#no issues here, looks half decent
-#the diagnostics look fine but we know we need to check other things based on the pp check
-```
-
-
-
-#### Results
-```{r}
-# generic summary 
-msubs.brm222 |> summary() 
-
-#thorough results
-msubs.brm222 |> 
-  as_draws_df() |>  
-  dplyr::select(matches("^b_.*")) |> 
-  exp() |> 
-  summarise_draws(median, 
-                  HDInterval::hdi,
-                  rhat, 
-                  ess_bulk,
-                  Pl=~mean(.x<1), 
-                  Pg=~mean(.x>1))
-
-#There is strong evidence 99% - Pl - ((1-0.2)*100) that we have a 80% decrease in cost_km for one unit increase in GDP per capita
-
-#the amount of variability explained by the model -quasi R sqaured
-msubs.brm222 |> bayes_R2(summary=FALSE) |> median_hdci()
-#we are explaining 10% of the variance with this model -  which should be a pretty good fit for the model
-```
-#### Plot results - predictions
-```{r}
-# Filter out NAs in the relevant columns
-msubs_GDP <- msubs |> 
-  filter(!is.na(GDP_pc))
-# Generate a sequence of GDP values to predict over
-gdp_seq3 <- seq(min(msubs_GDP$GDP_pc), max(msubs_GDP$GDP_pc), length.out = 100)
-# Use emmeans to get the predictions on the response scale
-pred_gdp3 <- emmeans(
-  msubs.brm222,
-  ~ GDP_pc,
-  at = list(GDP_pc = gdp_seq),
-  type = "response"
-) |> 
-  as.data.frame()
-
-#plot
-png("h7.png", width = 1400, height = 800, res = 300)
-ggplot(pred_gdp3, aes(x = GDP_pc, y = response)) +
-  geom_line(color = "#0072B2", size = 1) +
-  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#0072B2", alpha = 0.2) +
-  theme_bw() +
-  theme(text = element_text(family = "serif")) +
-  labs(
-    x = "GDP per capita (USD)",
-    y = "Maitenance cost/km²"
-  ) +
-  scale_y_log10()
+#Final plot combination 
+png("interactio_combined.png", width = 3000, height = 1900, res = 300)  # adjust as needed
+plot = int_est / int_man + plot_layout(guides='collect')
+plots = combined | plot
+plots + plot_annotation(tag_levels = 'A') 
 dev.off()
 ```
-
-
-
-
-
-
-
-
 
 
