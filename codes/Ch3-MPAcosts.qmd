@@ -101,6 +101,7 @@ esubs = esubs |>
                                                 levels=c("Fully protected", "Partially protected")), 
          ID=factor(ID)) # this will order them rather than going into alphabetical order 
 #View(esubs)
+summary(esubs)
 ```
 
 #### Exploratory data analysis
@@ -142,7 +143,7 @@ esubs |> ggplot(aes(y=Cost_km, x=Years)) +
 #starting setting up the model
 #model formula
 form1 = bf(Cost_km ~ scale(Size) + scale(Years) + Protection_level, family=Gamma(link='log'))
-View(esubs)
+#View(esubs)
 # mean for each group and mads for each group for our priors
 esubs |> 
   summarise(Median=median(log(Cost_km)), MAD=mad(log(Cost_km)))

@@ -1,0 +1,119 @@
+---
+title: "Global prediction"
+format: html
+---
+# Loading packages
+```{r}
+library(readr)
+library(dplyr)
+library(tidyverse)
+```
+
+
+# Loading the dataset
+```{r}
+# Importing the data
+MPA.Atlas <- read_csv("../Data/mpatlas_export_nogeo_202503/mpatlas_export_nogeo_202503.csv")
+View(MPA.Atlas)
+# Extract MPA sizes (in km²)
+mpa_sizes <- MPA.Atlas |>
+  filter(!is.na(zone_area_calc), zone_area_calc > 0) |>
+  pull(zone_area_calc)
+
+# Ocean stats
+global_ocean_area <- 361e6 # Define total global ocean area (in km²)
+initial_percent_protected <- 8.3 # Define the current protection level (as a percentage)
+initial_area_km2 <- global_ocean_area * (initial_percent_protected / 100)# Calculate how many km² are already protected based on 8.3%
+target_area_km2 <- global_ocean_area * 0.30# Calculate the target total protected area (30% of the ocean)
+remaining_area_km2 <- target_area_km2 - initial_area_km2# Calculate how much additional area we need to protect
+establishment_years <- c(1, 2, 6, 9)# Define the establishment period (in years)
+```
+
+## Scenario 1: Total establishment costs of 30% coverage
+```{r}
+# Predicted cost per km² from your model (assumed preloaded as `pred_size`)
+# We assume you already ran your model and have `pred_size` loaded
+pred_size_lookup <- pred_size |> #picks up the prediction of establishment costs from my statistics estimates
+  rename(cost_per_km2 = response) |> #renames the response variable 
+  arrange(Size) # Ensure the data is sorted by MPA size (needed for interpolation)
+
+# Interpolation function for cost per km²
+get_predicted_cost <- function(size_km2) {
+  approx(
+    x = pred_size_lookup$Size, # x-axis variable--> Size
+    y = pred_size_lookup$cost_per_km2, # y-axis variable--> cost_per_km2 corresponding to the size
+    xout = size_km2, # The size we want to predict the cost for
+    rule = 2 # Extrapolate if size is outside the range of the data
+  )$y
+}
+
+# Run simulations for all establishment years
+all_results <- list()
+
+for (year in establishment_years) { #for loop to make simulations for each establishment year
+  set.seed(123)  # for reproducibility
+  mpa_total_area <- 0 # Initialize total area for this year
+  mpa_records <- data.frame( # Creating an empty data frame to store MPA records
+    mpa_id = 0, # Unique identifier for each simulated MPA
+    size_km2 = 0, # Size of the MPA in km² --> gets filled later
+    est_cost = 0, # Estimated cost for the MPA --> gets filled later
+    cumulative_area = initial_area_km2, # Cumulative area protected
+    cumulative_cost = 0, # Cumulative cost for the MPA --> no costs yet
+    cumulative_percent = initial_percent_protected, #initial protection level
+    establishment_year = year #add establishment duration as a variable
+  )
+  
+  while (mpa_total_area < remaining_area_km2) { 
+    mpa_size <- sample(mpa_sizes, 1) # Randomly sample an MPA size from the dataset
+    cost_rate <- get_predicted_cost(mpa_size) # Get the predicted cost per km² for the sampled size
+    est_cost <- mpa_size * cost_rate * year #calculating establishment costs
+    mpa_total_area <- mpa_total_area + mpa_size # Update the total area protected in this iteration
+    
+    new_row <- data.frame( # Creating a new row for the MPA record
+      mpa_id = nrow(mpa_records), 
+      size_km2 = mpa_size, #renames/creates variable mpa_size into size_km2
+      est_cost = est_cost, #renames/creates variable est_cost into est_cost
+      cumulative_area = initial_area_km2 + mpa_total_area, # equation for total area for MPA
+      cumulative_cost = sum(mpa_records$est_cost) + est_cost, # equation for total cost for MPA --> uses establishment cost from previous rows and adds the current
+      cumulative_percent = 100 * (initial_area_km2 + mpa_total_area) / global_ocean_area, # equation for total area protected in percentage
+      establishment_year = year # each yearfrom the vector 
+    )
+    # Append the new row to the MPA records
+    mpa_records <- bind_rows(mpa_records, new_row)
+  }
+  
+  all_results[[as.character(year)]] <- mpa_records # Store results for this establishment year
+}
+
+# Combine all results
+combined_results <- bind_rows(all_results)
+
+# Plotting
+#png("scenario1_all_years.png", width = 3300, height = 1800, res = 300)
+
+ggplot(combined_results, aes(x = cumulative_percent, y = cumulative_cost / 1e9, color = factor(establishment_year))) +
+  geom_line(size = 1.2) +
+  geom_point(alpha = 0.3) +
+  labs(
+    title = "Estimated Cost to Expand MPAs to 30% with Size-Based Costs",
+    subtitle = "Establishment periods: 1, 2, 6, 9 years",
+    x = "Total Ocean Protected (%)",
+    y = "Cumulative Establishment Cost (Billion USD)",
+    color = "Establishment Period (years)"
+  ) +
+  theme_minimal(base_size = 14) +
+  geom_vline(xintercept = 8.3, linetype = "dashed", color = "gray40") +
+  geom_vline(xintercept = 30, linetype = "dashed", color = "red") +
+  annotate("text", x = 8.3, y = 0, label = "Existing (8.3%)", vjust = -1, color = "gray40") +
+  annotate("text", x = 30, y = max(combined_results$cumulative_cost) / 1e9 * 0.9,
+           label = "Target (30%)", color = "red", hjust = -0.1)
+
+#dev.off()
+
+```
+## Scenario 2: How long is it going to take to reach 30%? 
+```{r}
+
+```
+
+
