@@ -220,10 +220,9 @@ ggplot(combined_results, aes(x = cumulative_percent, y = cumulative_cost / 1e07,
            label = "Target\n30%", color = "red", hjust = -0.1)
 dev.off()
 
-
 ```
 
-## Scenario 2: How log is it going to take to reach 30% coverage
+## Scenario 2: How long is it going to take to reach 30% coverage
 ```{r}
 establishment_years <- 4 # Define the establishment period (in years) - using 4 because it is the median from the data I have
 #Cleaning data first - calculating the annual number of mpas per year or the % coverage per year
@@ -242,7 +241,7 @@ mpa_yearly1 <- mpa |>
 #looking at a basic summary of the data 
 View(mpa_yearly1)
 summary(mpa_yearly1)
-mean_area = mean(mpa_yearly$total_area) #calculate the mean total area protected per year
+mean_area = mean(mpa_yearly1$total_area) #calculate the mean total area protected per year
 mean_percent = 100 * mean_area / global_ocean_area#calculate the cumulative percentage of area protected
 
 # Calculate the cumulative area protected over time --> this is only to produce the ggplot below
@@ -271,16 +270,18 @@ dev.off()
 ```
 
 ```{r}
-#I need 
 # simulated years 2025 + 1
 sim_years <-max(mpa_yearly1$designated_date) + 1  # Define the years for simulation
-View(pred_size_lookup)
 
+#create a new dataset based on the combined_results, only selecting establishment years at 4
+combined_results1 <- combined_results |>
+  filter(establishment_year == 4)
+View(combined_results1)
 
 get_predicted_costs <- function(size_km2) {
   approx(
-    x = pred_size_lookup$Size, # x-axis variable--> Size
-    y = pred_size_lookup$cost_per_km2, # y-axis variable--> cost_per_km2 corresponding to the size
+    x = combined_results1$cumulative_area, # x-axis variable--> Size
+    y = combined_results1$cumulative_cost, # y-axis variable--> cost_per_km2 corresponding to the size
     xout = size_km2, # The size we want to predict the cost for
     rule = 2 # Extrapolate if size is outside the range of the data
   )$y
@@ -322,12 +323,13 @@ while ((initial_area_km2 + mpa_total_area) / global_ocean_area < 0.30) {
 View(mpa_records)
 
 #plotting the loop results 
+png("rateofprotectionto30.png", width = 3300, height = 1800, res = 300)
 ggplot(mpa_records, aes(x = year, y =cumulative_percent)) +
   geom_line(size = 1.2, color="darkgreen") +
   theme_minimal(base_size = 14) +
   geom_hline(yintercept = 30, linetype = "dashed", color = "red") +
   scale_y_continuous(sec.axis=sec_axis( ~ ./1.e9, # Create a secondary y-axis for cumulative cost
-      name = "est_cost")) + # Format the y-axis labels as percentages
+      name = "Establishment cost (USD)")) + # Format the y-axis labels as percentages
   labs(
     x = "Years",
     y = "Percentage of coverage") + 
@@ -336,79 +338,112 @@ ggplot(mpa_records, aes(x = year, y =cumulative_percent)) +
     axis.line = element_line(colour = "darkgrey"),
     axis.ticks = element_line(colour = "black"),
   )
+dev.off()
+```
+
+Scenario 3: Maintenance costs for current size distribution of MPAs
+```{r}
+#Calculate the initial management costs at 8.3% coverage based on the estimates from Brander et al., 2020 - based on 10% cover NPV 
+# This will give me a total cost for the 10% coverage 
+#i=0.03
+#t=2050-2015
+#NPV = 51625396492
+#R = NPV * (1+i)^t
+#Rt = R/t
+
+# Step 1: Prepare the predicted cost lookup table from the model
+# Assumes `pred_size` contains: Size, Protection_level (if any), and response (predicted cost per km² per year)
+pred_size_lookup2 <- pred_size2 |>
+  rename(cost_per_km2_per_year = response) |>  # Make column name explicit for clarity
+  arrange(Size)  # Ensure sorted for interpolation
+
+# Step 2: Define an interpolation function for predicted annual cost per km²
+get_predicted_cost <- function(size_km2) {
+  approx(
+    x = pred_size_lookup2$Size,                 # Known sizes
+    y = pred_size_lookup2$cost_per_km2_per_year, # Corresponding predicted management cost
+    xout = size_km2,                            # Size to predict cost for
+    rule = 2                                    # Allow extrapolation
+  )$y
+}
+
+# Step 3: Set initial conditions
+#Rt <- initial_area_km2 * get_predicted_cost(mean(mpa_sizes))  # Estimate baseline cost at 8.3% using mean size
+i=0.03 # 3% discount rate
+t=2050-2015 # #Number fo years between 2015 and 2050
+NPV = 51625396492
+R = NPV * (1+i)^t
+Rt = R/t
+
+# Initialize results data frame with the initial 8.3% protection state and cost Rt
+mpa_records <- data.frame(
+  mpa_id = 0,                                 # First record (baseline)
+  size_km2 = 0,                               # No new MPA added yet
+  annual_cost = Rt,                           # Starting annual management cost (Rt)
+  cumulative_area = initial_area_km2,         # Starting area is 8.3% of global ocean
+  cumulative_cost = Rt,                       # Total cost is Rt at t=0
+  cumulative_percent = initial_percent_protected  # 8.3% protected initially
+)
+
+# Step 4: Run simulation to incrementally add MPAs until reaching 30%
+set.seed(123)  # Ensure reproducibility
+mpa_total_area <- 0  # New area to be added (beyond initial 8.3%)
+
+while (mpa_total_area < remaining_area_km2) {
+  mpa_size <- sample(mpa_sizes, 1)  # Sample an MPA size from real-world data
+  cost_rate <- get_predicted_cost(mpa_size)  # Predicted cost per km² per year
+  annual_cost <- mpa_size * cost_rate        # Annual cost for this MPA
+  
+  mpa_total_area <- mpa_total_area + mpa_size  # Track how much area we've added
+
+  # Add new row to the results
+  new_row <- data.frame(
+    mpa_id = nrow(mpa_records),                      # Assign ID
+    size_km2 = mpa_size,                             # Size of new MPA
+    annual_cost = annual_cost,                       # Yearly management cost
+    cumulative_area = initial_area_km2 + mpa_total_area,  # Update total area
+    cumulative_cost = sum(mpa_records$annual_cost) + annual_cost,  # Running total cost
+    cumulative_percent = 100 * (initial_area_km2 + mpa_total_area) / global_ocean_area  # As % of ocean
+  )
+
+  # Append to dataset
+  mpa_records <- bind_rows(mpa_records, new_row)
+}
+
+# Step 5: Plot results
+png("scenario2_maintenance.png", width = 3300, height = 1800, res = 300)
+ggplot(mpa_records, aes(x = cumulative_percent, y = cumulative_cost / 1e9)) +
+  geom_line(color = "darkblue", size = 1.2) +                 # Line plot of cost vs. % protected
+  geom_point(alpha = 0.3, color = "darkblue") +               # Scatter for each data point
+  labs(
+    x = "Total Ocean Protected (%)",
+    y = "Cumulative Annual Management\nCost (Billion USD)"
+  ) +
+  theme_minimal(base_size = 14) +                             # Clean theme
+  geom_vline(xintercept = 8.3, linetype = "dashed", color = "black") +  # Mark current status
+  geom_vline(xintercept = 30, linetype = "dashed", color = "red") +      # Mark 30% goal
+  annotate("text", x = 8.3, y = 0, label = "Existing\n8.3%", vjust = -1.5, hjust=0.5, color = "black") +
+  annotate("text", x = 30, y = max(mpa_records$cumulative_cost) / 1e9 * 0.9,
+           label = "Target\n30%", color = "red", hjust = 1.2, vjust = 1)
+dev.off()
 
 ```
 
+
+
+## Scenario : Reach 30% coverage by 2030
 ```{r}
-#I need 
-# simulated years 2025 + 1
-sim_years <-max(mpa_yearly1$designated_date) + 1  # Define the years for simulation
-View(pred_size_lookup)
-
-#create a new dataset based on the combined_results, only selecting establishment years at 4
-combined_results <- combined_results |>
-  filter(establishment_year == 4) |> # Filter the results for establishment year 4
-  select(year, size_km2, est_cost, cumulative_area, cumulative_cost, cumulative_percent) # Select relevant columns
-
-get_predicted_costs <- function(size_km2) {
-  approx(
-    x = combined_results$Size, # x-axis variable--> Size
-    y = pred_size_lookup$cost_per_km2, # y-axis variable--> cost_per_km2 corresponding to the size
-    xout = size_km2, # The size we want to predict the cost for
-    rule = 2 # Extrapolate if size is outside the range of the data
-  )$y
-}
-
-# Initialize results data frame
-mpa_records <- data.frame(
-  year = 2025, # Year of simulation
-  size_km2 = 0, # Size of the MPA in km² --> gets filled later
-  est_cost = 0, # Estimated cost for the MPA --> gets filled later
-  cumulative_area = initial_area_km2, # Cumulative area protected
-  cumulative_cost = 0, # Cumulative cost for the MPA --> no costs yet
-  cumulative_percent = initial_percent_protected  #initial protection level
-)
-#View(mpa_records)
-# Simulation
-set.seed(123) # for reproducibility
-mpa_total_area <- 0 # Initialize total area for this year 
-
-while ((initial_area_km2 + mpa_total_area) / global_ocean_area < 0.30) { 
-  mpa_size <- sample(mpa_yearly1$total_area, 1) # Randomly sample an MPA size from the dataset
-  cost_rate <- get_predicted_costs(mpa_size) # Get the predicted cost per km² for the sampled size
-  est_cost <- mpa_size * cost_rate  #calculating establishment costs
-  mpa_total_area <- mpa_total_area + mpa_size # Update the total area protected in this iteration
-
-  new_row <- data.frame( # Creating a new row for the MPA record
-    year = sim_years, # Year of simulation
-    size_km2 = mpa_size, # Size of the MPA in km²
-    est_cost = est_cost, # Estimated cost for the MPA --> gets filled later
-    cumulative_area = initial_area_km2 + mpa_total_area, # equation for total area for MPA
-    cumulative_cost = sum(mpa_records$est_cost) + est_cost, # equation for total cost for MPA --> uses establishment cost from previous rows and adds the current
-    cumulative_percent = 100 * (initial_area_km2 + mpa_total_area) / global_ocean_area # equation for total area protected in percentage
-  )
-
-  mpa_records <- bind_rows(mpa_records, new_row)
-  sim_years <- sim_years + 1 # Increment the year for the next iteration
-}
-#checking the data
-View(mpa_records)
-
-#plotting the loop results 
-ggplot(mpa_records, aes(x = year, y =cumulative_percent)) +
-  geom_line(size = 1.2, color="darkgreen") +
-  theme_minimal(base_size = 14) +
-  geom_hline(yintercept = 30, linetype = "dashed", color = "red") +
-  scale_y_continuous(sec.axis=sec_axis( ~ ./1.e9, # Create a secondary y-axis for cumulative cost
-      name = "est_cost")) + # Format the y-axis labels as percentages
-  labs(
-    x = "Years",
-    y = "Percentage of coverage") + 
-  theme(
-    text=element_text(family='serif'), 
-    axis.line = element_line(colour = "darkgrey"),
-    axis.ticks = element_line(colour = "black"),
-  )
+# Define the target year
+target_year <- 2030 # Define the target year for 30% coverage
+# Calculate the number of years remaining until the target year
+remaining_years <- target_year - max(mpa_yearly1$designated_date) # Calculate the remaining years until the target year
+# Calculate the annual area needed to reach 30% coverage
+annual_area_needed <- (target_area_km2 - initial_area_km2) / remaining_years # Calculate the annual area needed to reach 30% coverage
+# Calculate the annual percentage needed to reach 30% coverage
+annual_percent_needed <- annual_area_needed/ global_ocean_area * 100 # Calculate the annual percentage needed to reach 30% coverage
+# Print the results
+cat("Annual area needed to reach 30% coverage:", annual_area_needed, "km²\n")
+```
 
 
 
