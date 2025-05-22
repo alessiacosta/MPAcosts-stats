@@ -42,7 +42,9 @@ source('helperFunctions.R')
 # Data analysis
 
 ## Bayesian regression with Gamma distribution - GDP per capita for establishment costs with interaction
+
 #### Data preparation
+
 ```{r}
 #importing establishment data
 esubs <- read_csv("../Data/esubs.csv")
@@ -60,6 +62,7 @@ esubs = esubs |>
 ```
 
 #### Exploratory analysis
+
 ```{r}
 #checking for linearity 
 esubs |> ggplot(aes(y=Cost_km, x=GDP_pc)) +
@@ -75,6 +78,7 @@ esubs |> ggplot(aes(y=Cost_km, x=GDP_pc)) +
 ```
 
 #### Fit the model
+
 ```{r}
 #model formula
 form.intge = bf(Cost_km ~ scale(GDP_pc) + scale(GDP_pc)*Protection_level, family=Gamma(link='log'))
@@ -131,6 +135,7 @@ esubs.brm.intge1 |>
 ```
 
 #### MCMC sampling
+
 ```{r}
 #trace plot 
 esubs.brm.intge1$fit |> stan_trace()
@@ -150,6 +155,7 @@ esubs.brm.intge1$fit |> stan_dens(separate_chains=TRUE)
 ```
 
 #### Model validation
+
 ```{r}
 #probability check
 esubs.brm.intge1 |> pp_check(type='dens_overlay', ndraws=100) + 
@@ -167,8 +173,8 @@ plotResiduals(esubs.resids.intge, quantreg = TRUE)
 #the diagnostics look fine but we know we need to check other things based on the pp check
 ```
 
-
 #### Results
+
 ```{r}
 # generic summary 
 esubs.brm.intge1 |> summary() 
@@ -192,8 +198,8 @@ esubs.brm.intge1 |> bayes_R2(summary=FALSE) |> median_hdci()
 #we are explaining 10% of the variance with this model -  which should be a pretty good fit for the model
 ```
 
-
 #### Plot results - predictions
+
 ```{r}
 #Predictions plots with GDP per capita only for establishment costs
 # Filter out NAs in the relevant columns
@@ -224,6 +230,7 @@ ggplot(pred_gdp, aes(x = GDP_pc, y = response)) +
   scale_y_log10()
 #dev.off()
 ```
+
 ```{r}
 #Prediction plots with GDP per capita split by protection level - interaction plots
 # Filter out NAs in the relevant columns
@@ -264,11 +271,10 @@ int_est = ggplot(pred_gdpe, aes(x = GDP_pc, y = response, color = Protection_lev
 #dev.off()
 ```
 
-
-
 ## Bayesian regression with Gamma distribution - GDP per capita for maitenance costs with interaction
 
 #### Data preparation
+
 ```{r}
 #using maintenance coded with subs 
 msubs <- read_csv("../Data/msubs.csv")
@@ -287,8 +293,8 @@ msubs = msubs |> mutate(Protection_level=factor(Protection_level,
                         ID=factor(ID))
 ```
 
-
 #### Exploratory analysis
+
 ```{r}
 #checking for linearity 
 msubs |> ggplot(aes(y=Cost_km, x=GDP_pc)) +
@@ -304,6 +310,7 @@ msubs |> ggplot(aes(y=Cost_km, x=GDP_pc)) +
 ```
 
 #### Fit the model
+
 ```{r}
 #model formula
 form.intgm = bf(Cost_km ~ scale(GDP_pc) + scale(GDP_pc)*Protection_level, family=Gamma(link='log'))
@@ -357,6 +364,7 @@ msubs.brm.intgm1 |>
 ```
 
 #### MCMC sampling
+
 ```{r}
 #trace plot 
 msubs.brm.intgm1$fit |> stan_trace()
@@ -376,6 +384,7 @@ msubs.brm.intgm1$fit |> stan_dens(separate_chains=TRUE)
 ```
 
 #### Model validation
+
 ```{r}
 #probability check
 msubs.brm.intgm1 |> pp_check(type='dens_overlay', ndraws=100) + 
@@ -394,6 +403,7 @@ plotResiduals(msubs.resids.intgm, quantreg = TRUE)
 ```
 
 #### Results
+
 ```{r}
 # generic summary 
 msubs.brm.intgm1 |> summary() 
@@ -418,6 +428,7 @@ msubs.brm.intgm1 |> bayes_R2(summary=FALSE) |> median_hdci()
 ```
 
 #### Plot results - predictions
+
 ```{r}
 #Predictions plots with GDP per capita only for maintenance costs
 # Filter out NAs in the relevant columns
@@ -490,12 +501,12 @@ int_man =ggplot(pred_gdp3, aes(x = GDP_pc, y = response, color = Protection_leve
 dev.off()
 ```
 
-
 ### Combining interaction plots
+
 ```{r}
 #Combining GDP plots for establishment and maintenance costs
 # Average response at each Size value for maintenance
-pred_maintg1 <- pred_gdp1 |> 
+pred_maintg1 <- pred_gdp0 |> 
   group_by(GDP_pc) |> 
   summarise(
     response = mean(response),
@@ -549,5 +560,3 @@ plots = combined | plot
 plots + plot_annotation(tag_levels = 'A') 
 dev.off()
 ```
-
-

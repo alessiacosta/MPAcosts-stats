@@ -43,7 +43,7 @@ source('helperFunctions.R')
 
 ```{r}
 #upload the right data
-fig1 <- read_csv("../Data/fig1.csv")
+fig1 <- read_csv("../Data/fig.1.csv")
 ```
 
 ## Making global map with my data
@@ -63,7 +63,7 @@ ggplot() +
   # Overlay the coastline in black
   geom_sf(data = coastline_data, color = "black", fill = NA) +  
   # Plot your data points
-  geom_point(data = fig1, aes(x = Longitude, y = Latitude), color = "#008080", size = 4) +  
+  geom_point(data = fig1, aes(x = Longitude, y = Latitude), color = "firebrick3", size = 5) +  # color #008080
   # Set coordinate system
   coord_sf() +
   # Adjust theme
@@ -90,7 +90,7 @@ dev.off()
 ```{r}
 #importing establishment data
 esubs <- read_csv("../Data/esubs.csv")
-#View(esubs)
+View(esubs)
 #removing the last two rows from the dataset cause for some reason it pops up as NAs
 #esubs <- head(esubs, -2)
 #View(esubs)
@@ -101,7 +101,7 @@ esubs = esubs |>
                                                 levels=c("Fully protected", "Partially protected")), 
          ID=factor(ID)) # this will order them rather than going into alphabetical order 
 #View(esubs)
-summary(esubs)
+#summary(esubs)
 ```
 
 #### Exploratory data analysis
@@ -136,25 +136,38 @@ esubs |> ggplot(aes(y=Cost_km, x=Years)) +
   geom_smooth(method="lm") +
   facet_wrap(~ID)
 
+#checking relationship between size and gdp
+ggplot() +
+  geom_point(data=esubs, aes(x=Size, y=Cost_km)) +
+  geom_smooth(data=esubs, aes(x=Size, y=Cost_km), method="lm") +
+  labs(x="Size (km²)", y="Establishment cost/km²")
+
+#checking distribution of mpa size
+hist(log(esubs$Size), nclass=75)
 ```
 
 #### Fit the model
 ```{r}
 #starting setting up the model
 #model formula
-form1 = bf(Cost_km ~ scale(Size) + scale(Years) + Protection_level, family=Gamma(link='log'))
+esubs <- esubs |> 
+  mutate(lSize=log(Size), 
+         lCost_km=log(Cost_km))
+
+#form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
+#correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
+form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + Protection_level, family=gaussian())
 #View(esubs)
 # mean for each group and mads for each group for our priors
 esubs |> 
-  summarise(Median=median(log(Cost_km)), MAD=mad(log(Cost_km)))
+  summarise(Median=median(lCost_km), MAD=mad(lCost_km))
   
 #looking at priors needed
 get_prior(form1, esubs)
 
 #setting my priors
-priors = prior(normal(12, 4), class='Intercept') +
-  prior(normal(0,4), class='b') +
-  prior(gamma(0.1,0.1), class='shape')
+priors = prior(normal(12, 1.8), class='Intercept') +
+  prior(normal(0,1.8), class='b') 
 
 # running the model with priors only
 esubs.brm1 = brm(form1, 
@@ -167,7 +180,8 @@ esubs.brm1 = brm(form1,
                cores = 3, 
                thin=5, 
                refresh=0, 
-               seed=1, 
+               seed=123, 
+               control = list(adapt_delta=0.99, max_treedepth=29),
                backend = "cmdstanr")
 
 #making a conditional plot
@@ -184,8 +198,7 @@ esubs.brm1 |>
 
 # running the model with both priors and data
 esubs.brm2 = esubs.brm1 |> 
-  update(sample_prior = 'yes', refresh=0)
-
+  update(sample_prior = 'yes', refresh=100)
 #Assess priors and posteriors
 esubs.brm2 |> SUYR_prior_and_posterior()
 
@@ -193,8 +206,8 @@ esubs.brm2 |> SUYR_prior_and_posterior()
 esubs.brm2 |>
   conditional_effects() |> 
   plot(points=TRUE) |> 
-  wrap_plots() &
-  scale_y_log10()
+  wrap_plots() # &
+  #scale_y_log10()
 #priors are not influential but there is very little data
 ```
 
@@ -223,8 +236,7 @@ esubs.brm2$fit |> stan_dens(separate_chains=TRUE)
 #### Model validation
 ```{r}
 #probability check
-esubs.brm2 |> pp_check(type='dens_overlay', ndraws=100) + 
-  xlim(0, 6.0e+06)
+esubs.brm2 |> pp_check(type='dens_overlay', ndraws=100)
 #not the best fit it could be 
 
 #sim residuals 
@@ -238,18 +250,15 @@ plotResiduals(esubs.resids, quantreg = TRUE)
 #the diagnostics look fine but we know we need to check other things based on the pp check
 
 #test for correlation 
-#esubs.resids |> testTemporalAutocorrelation(time=esubs$Years)
-#check if correlation between closer days is the same as correlation in apart days. this function gives error because residuals need to be aggregated 
+hist(esubs$Cost_km, nclass=75)
+hist(log(esubs$Cost_km), nclass=75)
+plot(esubs$lCost_km~esubs$GDP_pc)
+cor(esubs$lSize, esubs$GDP_pc)
+cor(esubs$Years, esubs$GDP_pc, use = "complete.obs")
+cor(esubs$Years, esubs$lSize, use = "complete.obs")
+library(corrplot)
+corrplot(esubs[,c("Years", "lSize", "lCost_km", "GDP_pc")], method="circle")
 
-#this is not working
-#aggregate the residuals so that all day 1 and all day etc. have the same residuals to have a singular auto correlation plot 
-#esubs.resids1 = esubs.resids |> 
-  #recalculateResiduals(group=esubs$Years, aggregateBy = sum)
-#now we can use the temporal autocorrelation plot 
-#esubs.resids1 |> testTemporalAutocorrelation(time=unique(esubs$Years))
-#check for autocorrelation 
-#autocor_check(esubs, esubs.brm2, variable = "Years", n.sim=250)
-#I do not think I need to check for autocorrelation with this data as it is not sampling data over time
 ```
 
 #### Results
@@ -261,15 +270,14 @@ esubs.brm2 |> summary()
 esubs.brm2 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
-  exp() |> 
   summarise_draws(median, 
                   HDInterval::hdi,
                   rhat, 
                   ess_bulk,
-                  Pl=~mean(.x<1), 
-                  Pg=~mean(.x>1))
+                  Pl=~mean(.x<0), 
+                  Pg=~mean(.x>0))
 
-#Paritally protected (1-0.062)*100= 3% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
+#Paritally protected (1-0.062)*100= 93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
 #the amount of variability explained by the model -quasi R sqaured
 esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
@@ -278,24 +286,22 @@ esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 
 #### Plot results - predictions
 ```{r}
-# Filter out NAs in the relevant columns
-esubs_clean_size <- esubs |> 
-  filter(!is.na(Size), !is.na(Years), !is.na(Protection_level))
-
 # Generate prediction data
 pred_size <- emmeans(
   esubs.brm2,
-  ~ Size | Protection_level,
-  at = list(Size = seq(min(esubs_clean_size$Size), max(esubs_clean_size$Size), length.out = 100),
-            Years = mean(esubs_clean_size$Years, na.rm = TRUE)),
+  ~ lSize | Protection_level,
+  at = list(lSize = seq(min(esubs$lSize), max(esubs$lSize), length.out = 100),
+            Years = mean(esubs$Years, na.rm = TRUE)),
   type = "response"
 ) |> as.data.frame()
 
+View(pred_size)
 #producing a predicted ggplot
-esize = ggplot(pred_size, aes(x = Size, y = response, color = Protection_level, fill = Protection_level)) +
+#esize = 
+  ggplot(pred_size, aes(x = lSize, y = emmean, color = Protection_level, fill = Protection_level)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  scale_y_log10() +
+  #scale_y_log10() +
   theme_bw() +
   theme(text = element_text(family = "serif")) +
   scale_fill_manual(
@@ -314,21 +320,26 @@ esize = ggplot(pred_size, aes(x = Size, y = response, color = Protection_level, 
   )
 
 # Generate prediction data
+#remove nas from the data
+esubs <- esubs |> 
+  filter(!is.na(Years)) 
+
 pred_size1 <- emmeans(
   esubs.brm2,
   ~ Years | Protection_level,
-  at = list(Years = seq(min(esubs_clean_size$Years), max(esubs_clean_size$Years), length.out = 100),
-            Size = mean(esubs_clean_size$Size, na.rm = TRUE)),
+  at = list(Years = seq(min(esubs$Years), max(esubs$Years), length.out = 100),
+            lSize = mean(esubs$lSize, na.rm = TRUE)),
   type = "response"
 ) |> as.data.frame()
+View(pred_size1)
 
 #plot prediction
-png("years.png", width = 1800, height = 1000, res = 300)
- #eyears = 
-   ggplot(pred_size1, aes(x = Years, y = response, color = Protection_level, fill = Protection_level)) +
+#png("years.png", width = 1800, height = 1000, res = 300)
+ #years = 
+   ggplot(pred_size1, aes(x = Years, y = emmean, color = Protection_level, fill = Protection_level)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  scale_y_log10() +
+  #scale_y_log10() +
   theme_bw() +
    theme(text = element_text(family = "serif")) +
   labs(
@@ -345,7 +356,7 @@ png("years.png", width = 1800, height = 1000, res = 300)
     values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
     labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
   )
- dev.off()
+ #dev.off()
 ```
 
 
@@ -362,17 +373,15 @@ png("years.png", width = 1800, height = 1000, res = 300)
 msubs <- read_csv("../Data/msubs.csv")
 #View(msubs)
 #preparing data
-msubs = msubs |> mutate(Protection_level=factor(Protection_level, 
-                                                levels=c("Fully protected", "Partially protected")), # this will order them rather than going into alphabetical order 
-                        Cost_class=factor(Cost_class, 
-                                          levels=c("Maintenance", "Administration", "Enforcement", "Management")),
-                        Management=factor(Management, 
-                                          levels=c(1,0)), 
-                        Administration=factor(Administration, 
-                                              levels=c(1,0)), 
-                        Enforcement=factor(Enforcement, 
-                                           levels=c(1,0)), 
-                        ID=factor(ID))
+#msubs = msubs |> mutate(Protection_level=factor(Protection_level, 
+                                                #levels=c("Fully protected", "Partially protected")))#, # this will order them rather than going into a
+summary(msubs)
+
+#Adding a new column for protection level and code it as a as binary --> 1 as fully protected and 0 for partially protected
+msubs$Protection_bin<-msubs$Enforcement*NA
+msubs$Protection_bin[msubs$Protection_level=="Fully protected"]<-1
+msubs$Protection_bin[msubs$Protection_level=="Partially protected"]<-0
+
 ```
 
 #### Exploratory data analysis
@@ -411,19 +420,22 @@ esubs |> ggplot(aes(y=Cost_km, x=Size)) +
 
 #### Fit the model
 ```{r}
-#model formula
-form = bf(Cost_km ~ scale(Size) + Management + Administration + Enforcement + Protection_level, family=Gamma(link='log'))
+#standardising the cost_km into smaller values
+msubs<- msubs |> 
+  mutate(sCost_km=Cost_km/10000) # this is to make the priors smaller and more manageable
+#model formula 
+#by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
+form = bf(sCost_km ~ 0 + scale(log(Size)) + scale(GDP_pc) + scale(Protection_bin) + Administration + Enforcement + Management, family=gaussian)
 # mean for each group and mads for each group for our priors
 msubs |> 
-  summarise(Median=median(log(Cost_km)), MAD=mad(log(Cost_km)))
+  summarise(Median=median(sCost_km), MAD=mad(sCost_km))
 
 #getting standard priors
 get_prior(form, data=msubs)
 
 #setting priors
-priors = prior(normal(8, 3), class='Intercept') +
-  prior(normal(0,3), class='b') +
-  prior(gamma(0.1,0.1), class='shape')
+priors =# prior(normal(8, 3), class='Intercept') +
+  prior(normal(0,5), class='b') #within brackets add lb=0
 
 # running the model with priors only
 msubs.brm1 = brm(form, 
@@ -436,7 +448,8 @@ msubs.brm1 = brm(form,
                cores = 3, 
                thin=5, 
                refresh=0, 
-               seed=1, 
+               seed=123, 
+               control = list(adapt_delta=0.99, max_treedepth=15),
                backend = "cmdstanr")
 
 #making a conditional plot
@@ -449,17 +462,13 @@ msubs.brm1 |>
 # running the model with both priors and data
 msubs.brm2 = msubs.brm1 |> 
   update(sample_prior = 'yes', refresh=0)
-
 #Assess priors and posteriors
-msubs.brm2 |> SUYR_prior_and_posterior()
-
+msubs.brm2 |> SUYR_prior_and_posterior() # this does not run because i hano intercept in the model 
 #Produce the same conditional plot but with the posteriors
 msubs.brm2 |>
   conditional_effects() |> 
   plot(points=TRUE) |> 
-  wrap_plots() &
-  scale_y_log10()
-#priors are not influential but there is very little data
+  wrap_plots()
 ```
 
 #### MCMC sampling diagnostics
@@ -477,14 +486,14 @@ msubs.brm2$fit |> stan_rhat()
 msubs.brm2$fit |> stan_ess() # there are no issues here
 
 #check the densities
-esubs.brm2$fit |> stan_dens(separate_chains=TRUE)
+msubs.brm2$fit |> stan_dens(separate_chains=TRUE)
 #this plot is good if we have high hats 
 ```
 
 #### Model validation
 ```{r}
 #probability check
-msubs.brm2 |> pp_check(type='dens_overlay', ndraws=100)
+msubs.brm2 |> pp_check(type='dens_overlay', ndraws=100) 
 #not the best fit it could be 
 
 #sim residuals 
@@ -501,7 +510,7 @@ plotResiduals(msubs.resids, quantreg = TRUE)
 #### Results
 ```{r}
 # generic summary 
-msubs.brm2 |> summary() 
+msubs.brm2 |> summary()
 
 #thorough results
 msubs.brm2 |> 
@@ -514,8 +523,7 @@ msubs.brm2 |>
                   ess_bulk,
                   Pl=~mean(.x<1), 
                   Pg=~mean(.x>1))
-
-#Paritally protected (1-0.062)*100= 3% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
+#Partially protected (1-0.062)*100= 93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
 #the amount of variability explained by the model -quasi R sqaured
 msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
@@ -536,12 +544,13 @@ pred_size2 <- emmeans(
     Enforcement = levels(msubs$Enforcement)[1]),
   type = "response") |> 
   as.data.frame()
-
+View(pred_size2)
 #prediction plot
-msize = ggplot(pred_size2, aes(x = Size, y = response, color = Protection_level, fill = Protection_level)) +
+#msize = 
+  ggplot(pred_size2, aes(x = Size, y = response, color = Protection_level, fill = Protection_level)) +
   geom_line(size = 0.8) +
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  scale_y_log10(labels = label_scientific()) +
+  #scale_y_log10(labels = label_scientific()) +
   scale_x_continuous(labels = label_scientific()) +  # Scientific notation on x-axis
   theme_bw() +
   theme(text = element_text(family = "serif")) +
@@ -596,12 +605,13 @@ pred_estab$type <- "Establishment"
 pred_combined <- bind_rows(pred_maint, pred_estab)
 
 # Plot
-png("h1.png", width = 1400, height = 800, res = 300)
-scales = ggplot(pred_combined, aes(x = Size, y = response, color = type, fill = type)) +
+#png("h1.png", width = 1400, height = 800, res = 300)
+#scales = 
+  ggplot(pred_combined, aes(x = Size, y = response, color = type, fill = type)) +
   geom_line(size = 0.8) +
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   scale_x_continuous(labels = label_scientific()) +
-  scale_y_log10(labels = label_scientific()) +
+  #scale_y_log10(labels = label_scientific()) +
   theme_bw() +
   theme(text = element_text(family = "serif"),
     legend.position = c(0.95, 0.98),  # Top right corner
@@ -615,14 +625,14 @@ scales = ggplot(pred_combined, aes(x = Size, y = response, color = type, fill = 
   ) +
   scale_color_manual(values = c("Maintenance" = "#0072B2", "Establishment" = "#D55E00")) +
   scale_fill_manual(values = c("Maintenance" = "#0072B2", "Establishment" = "#D55E00"))
-dev.off()
+#dev.off()
 #the prediction becomes very close to zero because we are using a log link distribution but never negative --> this is fro when I am not logging 10 the y axis
 
 #hypothesis n 4
-png("economiesofscales.png", width = 3300, height = 1800, res = 300)  # adjust as needed
+#png("economiesofscales.png", width = 3300, height = 1800, res = 300)  # adjust as needed
 plots1 = esize / msize + plot_layout(guides = 'collect') 
 plots2 = scales | plots1
 plots2 + plot_annotation(tag_levels = 'A') 
-dev.off()
+#dev.off()
 ```
 

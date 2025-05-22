@@ -18,6 +18,7 @@ library(writexl) # helps with parallel processing
 # Importing the data
 MPA.Atlas <- read_csv("../Data/mpatlas_export_nogeo_202503/mpatlas_export_nogeo_202503.csv")
 #View(MPA.Atlas)
+
 # Extract MPA sizes (in km²)
 mpa_sizes <- MPA.Atlas |>
   mutate(designated_date=year(ymd_hms(designated_date))) |> #cleans the designated date and extracts the year only
@@ -184,7 +185,7 @@ for (year in establishment_years) { #for loop to make simulations for each estab
       cumulative_area = initial_area_km2 + mpa_total_area, # equation for total area for MPA
       cumulative_cost = sum(mpa_records$est_cost) + est_cost, # equation for total cost for MPA --> uses establishment cost from previous rows and adds the current
       cumulative_percent = 100 * (initial_area_km2 + mpa_total_area) / global_ocean_area, # equation for total area protected in percentage
-      establishment_year = year # each yearfrom the vector 
+      establishment_year = year # each year from the vector 
     )
     # Append the new row to the MPA records
     mpa_records <- bind_rows(mpa_records, new_row)
@@ -429,9 +430,7 @@ dev.off()
 
 ```
 
-
-
-## Scenario : Reach 30% coverage by 2030
+## Scenario 4: Reach 30% coverage by 2030
 ```{r}
 # Define the target year
 target_year <- 2030 # Define the target year for 30% coverage
