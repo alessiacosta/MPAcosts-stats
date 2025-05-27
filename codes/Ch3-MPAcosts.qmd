@@ -156,18 +156,18 @@ esubs <- esubs |>
 
 #form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
 #correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
-form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + Protection_level, family=gaussian())
+form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + Protection_level, family=gaussian)
 #View(esubs)
 # mean for each group and mads for each group for our priors
-esubs |> 
+esubs |> group_by(Protection_level) |>
   summarise(Median=median(lCost_km), MAD=mad(lCost_km))
   
 #looking at priors needed
 get_prior(form1, esubs)
 
 #setting my priors
-priors = prior(normal(12, 1.8), class='Intercept') +
-  prior(normal(0,1.8), class='b') 
+priors = prior(normal(11, 1.8), class='Intercept') +
+  prior(normal(0,1.8), class='b')
 
 # running the model with priors only
 esubs.brm1 = brm(form1, 
@@ -270,14 +270,15 @@ esubs.brm2 |> summary()
 esubs.brm2 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
-  summarise_draws(median, 
-                  HDInterval::hdi,
-                  rhat, 
-                  ess_bulk,
-                  Pl=~mean(.x<0), 
-                  Pg=~mean(.x>0))
+  summarise_draws(
+    median=~exp(median(.x)), 
+    hdi = ~HDInterval::hdi(exp(.x)),
+    rhat, 
+    ess_bulk,
+    Pl=~mean(.x<0), 
+    Pg=~mean(.x>0))
 
-#Paritally protected (1-0.062)*100= 93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
+#Paritally protected (0.062-1)*100= -93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
 #the amount of variability explained by the model -quasi R sqaured
 esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
@@ -289,8 +290,8 @@ esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 # Generate prediction data
 pred_size <- emmeans(
   esubs.brm2,
-  ~ lSize | Protection_level,
-  at = list(lSize = seq(min(esubs$lSize), max(esubs$lSize), length.out = 100),
+  ~ Size | Protection_level,
+  at = list(Size = seq(min(esubs$Size), max(esubs$Size), length.out = 100),
             Years = mean(esubs$Years, na.rm = TRUE)),
   type = "response"
 ) |> as.data.frame()
@@ -301,7 +302,8 @@ View(pred_size)
   ggplot(pred_size, aes(x = lSize, y = emmean, color = Protection_level, fill = Protection_level)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  #scale_y_log10() +
+  scale_y_log10() +
+  scale_x_log10() + 
   theme_bw() +
   theme(text = element_text(family = "serif")) +
   scale_fill_manual(
@@ -315,8 +317,8 @@ View(pred_size)
     labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
   ) +
   labs(
-    x = "Size (km²)",
-    y = "Establishment cost/km²"
+    x = "lnSize (km²)",
+    y = "lnEstablishment cost/km²"
   )
 
 # Generate prediction data
@@ -339,7 +341,8 @@ View(pred_size1)
    ggplot(pred_size1, aes(x = Years, y = emmean, color = Protection_level, fill = Protection_level)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  #scale_y_log10() +
+  scale_y_log10() +
+  scale_x_log10() +
   theme_bw() +
    theme(text = element_text(family = "serif")) +
   labs(
@@ -425,17 +428,17 @@ msubs<- msubs |>
   mutate(sCost_km=Cost_km/10000) # this is to make the priors smaller and more manageable
 #model formula 
 #by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
-form = bf(sCost_km ~ 0 + scale(log(Size)) + scale(GDP_pc) + scale(Protection_bin) + Administration + Enforcement + Management, family=gaussian)
+form = bf(Cost_km ~ 0 + scale(log(Size)) + scale(GDP_pc) + scale(Protection_bin) + Administration + Enforcement + Management, family=gaussian)
 # mean for each group and mads for each group for our priors
 msubs |> 
-  summarise(Median=median(sCost_km), MAD=mad(sCost_km))
+  summarise(Median=median(Cost_km), MAD=mad(Cost_km))
 
 #getting standard priors
 get_prior(form, data=msubs)
 
 #setting priors
 priors =# prior(normal(8, 3), class='Intercept') +
-  prior(normal(0,5), class='b') #within brackets add lb=0
+  prior(normal(0,4000), class='b') #within brackets add lb=0
 
 # running the model with priors only
 msubs.brm1 = brm(form, 
@@ -516,13 +519,12 @@ msubs.brm2 |> summary()
 msubs.brm2 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
-  exp() |> 
   summarise_draws(median, 
                   HDInterval::hdi,
                   rhat, 
                   ess_bulk,
-                  Pl=~mean(.x<1), 
-                  Pg=~mean(.x>1))
+                  Pl=~mean(.x<0), 
+                  Pg=~mean(.x>0))
 #Partially protected (1-0.062)*100= 93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
 #the amount of variability explained by the model -quasi R sqaured

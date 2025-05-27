@@ -3,9 +3,11 @@ title: "frequentist"
 format: html
 ---
 
+
 # statistics frequentist
 
 ## packages
+
 
 ```{r}
 library(readr)
@@ -46,11 +48,11 @@ msubs = msubs |> mutate( #(Protection_level=factor(Protection_level,
                                           levels=c("Maintenance", "Administration", "Enforcement", "Management")))
                         #,
                         #Management=factor(Management, 
-                                          #levels=c(1,0)), 
+                                          levels=c(1,0)), 
                         #Administration=factor(Administration, 
-                                              #levels=c(1,0)), 
+                                              levels=c(1,0)), 
                         #Enforcement=factor(Enforcement, 
-                                           #levels=c(1,0)), 
+                                           levels=c(1,0)), 
                         #ID=factor(ID))
 head(msubs)
 aggregate(as.numeric(as.character(Cost_km)) ~ Cost_class, data = msubs, FUN = mean)
@@ -68,7 +70,9 @@ plot(log(msubs$Size), msubs$Cost_km)
 exp(m2$coefficients)
 ```
 
+
 # Bayesian with normal distribution
+
 
 ```{r}
 #starting setting up the model
@@ -156,7 +160,9 @@ testUniformity(esubs.resids)
 plotResiduals(esubs.resids, quantreg = TRUE)
 ```
 
+
 ## Results
+
 
 ```{r}
 # generic summary 
@@ -200,7 +206,9 @@ ggplot(pred_size, aes(x = Size, y = emmean, color = Protection_level, fill = Pro
   )
 ```
 
+
 # Maitenance costs - Bayesian normal distribution
+
 
 ```{r}
 #starting setting up the model
@@ -255,7 +263,9 @@ msubs.brm2 |>
 #priors are not influential but there is very little data
 ```
 
+
 ## MCMC validation
+
 
 ```{r}
 #trace plot 
@@ -275,7 +285,9 @@ msubs.brm2$fit |> stan_dens(separate_chains=TRUE)
 #this plot is good if we have high hats 
 ```
 
+
 ## Model validation
+
 
 ```{r}
 #probability check
@@ -297,3 +309,4 @@ plotResiduals(msubs.resids, quantreg = TRUE)
 ```{r}
 
 ```
+
