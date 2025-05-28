@@ -288,37 +288,58 @@ esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 #### Plot results - predictions
 ```{r}
 # Generate prediction data
-pred_size <- emmeans(
+#pred_size <- emmeans(
+  #esubs.brm2,~ lSize,
+  #at = list(
+  #lSize = seq(min(esubs$lSize), max(esubs$lSize), length.out = 100),
+    #Years = mean(esubs$Years, na.rm = TRUE))) |>
+  #gather_emmeans_draws() |>               # Get posterior draws in tidy format
+  #mutate(.value = exp(.value)) |>         # Back-transform from log scale
+  #group_by(lSize) |>                      # Summarise for each lSize
+  #summarise(
+    #median = median(.value),
+    #lower.HPD = hdi(.value)[1],
+    #upper.HPD = hdi(.value)[2]
+  #) |> 
+  #ungroup()
+
+#backtrnasformed the response variable to identity (or absolute values) as well as intervals 
+pred_draws <- emmeans(
   esubs.brm2,
-  ~ Size | Protection_level,
-  at = list(Size = seq(min(esubs$Size), max(esubs$Size), length.out = 100),
-            Years = mean(esubs$Years, na.rm = TRUE)),
-  type = "response"
-) |> as.data.frame()
+  ~ lSize,
+  at = list(
+    lSize = seq(min(esubs$lSize), max(esubs$lSize), length.out = 100),
+    Years = mean(esubs$Years, na.rm = TRUE)
+  )
+) |>
+  gather_emmeans_draws() |>
+  mutate(.value = exp(.value))  # back-transform from log
+
+# Now safely summarise per lSize using purrr
+pred_size <- pred_draws |>
+  group_split(lSize) |>
+  map_dfr(function(df) {
+    hdi_vals <- hdi(df$.value)
+    tibble(
+      lSize     = unique(df$lSize),
+      median    = median(df$.value),
+      lower.HPD = hdi_vals[1],
+      upper.HPD = hdi_vals[2]
+    )
+  })
 
 View(pred_size)
 #producing a predicted ggplot
 #esize = 
-  ggplot(pred_size, aes(x = lSize, y = emmean, color = Protection_level, fill = Protection_level)) +
+  ggplot(pred_size, aes(x = lSize, y = median)) +
   geom_line(size = 0.8) +  # thinner line
+  #geom_point(data=esubs, aes(x=lSize, y=Cost_km)) + 
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  scale_y_log10() +
-  scale_x_log10() + 
   theme_bw() +
   theme(text = element_text(family = "serif")) +
-  scale_fill_manual(
-    name = "Protection status",
-    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
-    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
-  ) +
-  scale_color_manual(
-    name = "Protection status",
-    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
-    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
-  ) +
   labs(
     x = "lnSize (km²)",
-    y = "lnEstablishment cost/km²"
+    y = "Establishment cost/km²"
   )
 
 # Generate prediction data
@@ -326,39 +347,43 @@ View(pred_size)
 esubs <- esubs |> 
   filter(!is.na(Years)) 
 
-pred_size1 <- emmeans(
+pred_draws1 <- emmeans(
   esubs.brm2,
-  ~ Years | Protection_level,
+  ~ Years,
   at = list(Years = seq(min(esubs$Years), max(esubs$Years), length.out = 100),
-            lSize = mean(esubs$lSize, na.rm = TRUE)),
-  type = "response"
-) |> as.data.frame()
+            lSize = mean(esubs$lSize, na.rm = TRUE))
+) |>
+  gather_emmeans_draws() |>
+  mutate(.value = exp(.value))
+
+pred_size1 <- pred_draws1 |>
+  group_split(Years) |>
+  map_dfr(function(df) {
+    hdi_vals <- hdi(df$.value)
+    tibble(
+      Years    = unique(df$Years),
+      median    = median(df$.value),
+      lower.HPD = hdi_vals[1],
+      upper.HPD = hdi_vals[2]
+    )
+  })
+
 View(pred_size1)
 
 #plot prediction
 #png("years.png", width = 1800, height = 1000, res = 300)
  #years = 
-   ggplot(pred_size1, aes(x = Years, y = emmean, color = Protection_level, fill = Protection_level)) +
+   ggplot(pred_size1, aes(x = Years, y = median)) +
   geom_line(size = 0.8) +  # thinner line
+  #geom_point(data =esubs, aes(x=Years, y=Cost_km)) +
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  scale_y_log10() +
-  scale_x_log10() +
+     scale_y_continuous(labels = label_scientific()) +  # Scientific notation on y-axis
   theme_bw() +
    theme(text = element_text(family = "serif")) +
   labs(
     x = "Establishment years",
-    y = "Estimated cost per km²"
-  ) +
-  scale_fill_manual(
-    name = "Protection status",
-    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
-    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
-  ) +
-  scale_color_manual(
-    name = "Protection status",
-    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
-    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
-  )
+    y = "Estimated cost per km²")
+  
  #dev.off()
 ```
 
@@ -425,10 +450,11 @@ esubs |> ggplot(aes(y=Cost_km, x=Size)) +
 ```{r}
 #standardising the cost_km into smaller values
 msubs<- msubs |> 
-  mutate(sCost_km=Cost_km/10000) # this is to make the priors smaller and more manageable
+  mutate(sCost_km=Cost_km/10000) |>  # this is to make the priors smaller and more manageable
+  mutate(lSize=log(Size))
 #model formula 
 #by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
-form = bf(Cost_km ~ 0 + scale(log(Size)) + scale(GDP_pc) + scale(Protection_bin) + Administration + Enforcement + Management, family=gaussian)
+form = bf(Cost_km ~ 0 + scale(lSize) + scale(GDP_pc) + scale(Protection_bin) + Administration + Enforcement + Management, family=gaussian)
 # mean for each group and mads for each group for our priors
 msubs |> 
   summarise(Median=median(Cost_km), MAD=mad(Cost_km))
@@ -472,6 +498,20 @@ msubs.brm2 |>
   conditional_effects() |> 
   plot(points=TRUE) |> 
   wrap_plots()
+#plot cost_km vs l size with a trend line
+# Remove the largest value of Size
+msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
+msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
+msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
+msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
+ggplot(msubs, aes(x=Size, y=Cost_km)) +
+  geom_point() +
+  geom_smooth(method="glm", method.args = list(family = gaussian(link = "log")), 
+              formula = y ~ x, se = TRUE) +
+  scale_y_log10() + 
+  labs(x="lnSize (km²)", y="Maintenance cost/km² p.a.") +
+  theme_bw() +
+  theme(text = element_text(family = "serif"))
 ```
 
 #### MCMC sampling diagnostics
@@ -535,21 +575,22 @@ msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 
 #### Plot results - predictions
 ```{r}
+# Step 1: Build raw newdata
 #prediction of the maintenance costs/km2 per year
 pred_size2 <- emmeans(
   msubs.brm2,
   ~ Size | Protection_level,
-  at = list(
-    Size = seq(min(msubs$Size), max(msubs$Size), length.out = 100),
-    Management = levels(msubs$Management)[1],       # fix to first level
-    Administration = levels(msubs$Administration)[1],
-    Enforcement = levels(msubs$Enforcement)[1]),
+  at = list(Size = seq(min(msubs$Size), max(msubs$Size), length.out = 100),
+            Management = levels(msubs$Management)[1],       # fix to first level
+            Administration = levels(msubs$Administration)[1],
+            Enforcement = levels(msubs$Enforcement)[1]),
   type = "response") |> 
   as.data.frame()
+
 View(pred_size2)
 #prediction plot
 #msize = 
-  ggplot(pred_size2, aes(x = Size, y = response, color = Protection_level, fill = Protection_level)) +
+  ggplot(pred_size2, aes(x = lSize, y = median)) +
   geom_line(size = 0.8) +
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   #scale_y_log10(labels = label_scientific()) +
@@ -557,18 +598,8 @@ View(pred_size2)
   theme_bw() +
   theme(text = element_text(family = "serif")) +
   labs(
-    x = "Size (km²)",
-    y = "Maintenance cost/km² p.a.") +
-  scale_fill_manual(
-    name = "Protection status",
-    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
-    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
-  ) +
-  scale_color_manual(
-    name = "Protection status",
-    values = c("Fully protected" = "#0072B2", "Partially protected" = "#D55E00"),
-    labels = c("Fully protected" = "Fully protected", "Partially protected" = "Multi-use areas")
-  )
+    x = "lnSize (km²)",
+    y = "Maintenance cost/km² p.a.")
 
 ```
 
@@ -586,23 +617,17 @@ View(pred_size2)
 #hypothesis 1 
 # Average response at each Size value for maintenance
 pred_maint <- pred_size2 |> 
-  group_by(Size) |> 
+  group_by(lSize) |> 
   summarise(
     response = mean(response),
     lower.HPD = mean(lower.HPD),
     upper.HPD = mean(upper.HPD)
   )
 # Establishment cost prediction
-pred_estab <- pred_size |> 
-  group_by(Size) |> 
-  summarise(
-    response = mean(response),
-    lower.HPD = mean(lower.HPD),
-    upper.HPD = mean(upper.HPD)
-  )
+
 #adding 'type' so I can assign different colors to them 
 pred_maint$type <- "Maintenance"
-pred_estab$type <- "Establishment"
+pred_size$type <- "Establishment"
 #combine the two into one dataframe
 pred_combined <- bind_rows(pred_maint, pred_estab)
 
