@@ -60,7 +60,7 @@ aggregate(as.numeric(as.character(lSize)) ~ Cost_class, data = msubs, FUN = mean
 aggregate(as.numeric(as.character(GDP_pc)) ~ Cost_class, data = msubs, FUN = mean)
 
 #making a frequentist model 
-m2 = lm(Cost_km ~ scale(log(Size)) + Administration + Enforcement + Management, msubs, family=gaussian)
+m2 = lm(lCost_km ~ 0+scale(log(Size)) + Administration + Enforcement + Management, msubs, family=gaussian)
 summary(m2)
 
 plot(log(msubs$Size), msubs$Cost_km)

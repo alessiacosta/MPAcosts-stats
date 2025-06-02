@@ -3,6 +3,7 @@ title: "Ch3-MPAcosts"
 ---
 
 # Loading packages needed for the project
+
 ```{r}
 library(readr)
 library(ggplot2)
@@ -31,14 +32,17 @@ library(modelsummary)  #for data and model summaries
 library(ggridges)      #for ridge plots 
 library(stringr)
 library(tidyr)
+library(purrr)
+library(HDInterval)
+library(tibble)
 library(geoR)
 library(scales)
 #sourcing functions from Murray's github repository
 source('helperFunctions.R')
 ```
 
-
 # Making a map of the MPAs found
+
 ## Loading the map data
 
 ```{r}
@@ -47,6 +51,7 @@ fig1 <- read_csv("../Data/fig.1.csv")
 ```
 
 ## Making global map with my data
+
 ```{r}
 # Get world map data
 world <- ne_countries(scale = "medium", returnclass = "sf")
@@ -80,13 +85,12 @@ dev.off()
 
 ```
 
-
-
 # Statistics
 
 ## Bayesian regression with Gamma distribution - establishment
 
 #### Data preparation
+
 ```{r}
 #importing establishment data
 esubs <- read_csv("../Data/esubs.csv")
@@ -96,15 +100,17 @@ View(esubs)
 #View(esubs)
 
 #data preparation
-esubs = esubs |> 
-  mutate(Protection_level=factor(Protection_level, 
-                                                levels=c("Fully protected", "Partially protected")), 
-         ID=factor(ID)) # this will order them rather than going into alphabetical order 
+#esubs = esubs |> 
+  #mutate(Protection_level=factor(Protection_level, 
+   #                                             levels=c("Fully protected", "Partially protected")), 
+    #     ID=factor(ID)) # this will order them rather than going into alphabetical order 
 #View(esubs)
 #summary(esubs)
+
 ```
 
 #### Exploratory data analysis
+
 ```{r}
 # Data exploration to see what distribution I can use in the model
 #looking at distribution for costs/km2 divided by gdp classc
@@ -147,6 +153,7 @@ hist(log(esubs$Size), nclass=75)
 ```
 
 #### Fit the model
+
 ```{r}
 #starting setting up the model
 #model formula
@@ -212,6 +219,7 @@ esubs.brm2 |>
 ```
 
 #### MCMC sampling diagnostics
+
 ```{r}
 #trace plot 
 esubs.brm2$fit |> stan_trace()
@@ -234,6 +242,7 @@ esubs.brm2$fit |> stan_dens(separate_chains=TRUE)
 ```
 
 #### Model validation
+
 ```{r}
 #probability check
 esubs.brm2 |> pp_check(type='dens_overlay', ndraws=100)
@@ -262,6 +271,7 @@ corrplot(esubs[,c("Years", "lSize", "lCost_km", "GDP_pc")], method="circle")
 ```
 
 #### Results
+
 ```{r}
 # generic summary 
 esubs.brm2 |> summary() 
@@ -286,6 +296,7 @@ esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 ```
 
 #### Plot results - predictions
+
 ```{r}
 # Generate prediction data
 #pred_size <- emmeans(
@@ -330,17 +341,43 @@ pred_size <- pred_draws |>
 
 View(pred_size)
 #producing a predicted ggplot
-#esize = 
+lesize = 
   ggplot(pred_size, aes(x = lSize, y = median)) +
   geom_line(size = 0.8) +  # thinner line
-  #geom_point(data=esubs, aes(x=lSize, y=Cost_km)) + 
+  geom_point(data=esubs, aes(x=lSize, y=Cost_km)) + 
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+  theme_bw() +
+  theme(text = element_text(family = "serif", size=7),
+        axis.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  scale_y_log10()
+
+nesize = 
+  ggplot(pred_size, aes(x = lSize, y = median)) +
+  geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   theme_bw() +
   theme(text = element_text(family = "serif")) +
+  ylim(0, 1.0e+06) + # setting the y limits to make it more readable
+  scale_y_continuous(labels = label_scientific()) +
   labs(
-    x = "lnSize (km²)",
-    y = "Establishment cost/km²"
+    x = "lnSize (ln(km²))",
+    y = "Estmated establishment costs (cost/km²)"
   )
+
+ #Combine and export the inset
+png("establishment size.png", width = 1500, height = 1000, res = 300) 
+#final_plot <- 
+nesize + 
+  inset_element(
+    lesize,
+    left = 0.35,
+    bottom = 0.4,
+    right = 0.98,
+    top = 0.95
+  )
+dev.off()
 
 # Generate prediction data
 #remove nas from the data
@@ -348,61 +385,102 @@ esubs <- esubs |>
   filter(!is.na(Years)) 
 
 pred_draws1 <- emmeans(
+  # This is the fitted Bayesian model object, likely of class 'brmsfit' (e.g., from the 'brms' package)
   esubs.brm2,
+  # This formula specifies that we want to compute marginal means over the variable 'Years'
   ~ Years,
-  at = list(Years = seq(min(esubs$Years), max(esubs$Years), length.out = 100),
-            lSize = mean(esubs$lSize, na.rm = TRUE))
-) |>
+  # This 'at' argument defines the values of the predictors at which to compute the EMMs
+  at = list(
+    # Create a sequence of 100 evenly spaced values between the minimum and maximum of 'Years'
+    Years = seq(min(esubs$Years), max(esubs$Years), length.out = 100),
+    # Set the value of 'lSize' to its mean (excluding NAs) for marginalization purposes
+    lSize = mean(esubs$lSize, na.rm = TRUE))) |>
+  # Extract the posterior draws of the marginal means
+  # 'gather_emmeans_draws()' is from the 'tidybayes' package and converts EMM output to a tidy format,
+  # preserving the full set of posterior samples for each marginal mean
   gather_emmeans_draws() |>
+  # Transform the predicted values (assumed to be on the log scale) back to the original scale
+  # If the model used a log-link function, we exponentiate the predicted values to get them on the response scale
   mutate(.value = exp(.value))
 
+# This line takes the 'pred_draws1' data frame and pipes it through a series of transformations
 pred_size1 <- pred_draws1 |>
+  # First, it splits the data frame into a list of data frames by the 'Years' column.
+  # Each element in the resulting list contains rows corresponding to one year.
   group_split(Years) |>
+  # Then, for each data frame (corresponding to a year), the anonymous function is applied.
+  # The 'map_dfr()' function from the 'purrr' package maps the function over the list,
+  # and returns a single combined data frame by row-binding all the results.
   map_dfr(function(df) {
+    # Calculate the highest density interval (HDI) for the '.value' column in the current data frame.
+    # 'hdi()' returns the lower and upper bounds of the HDI.
     hdi_vals <- hdi(df$.value)
+    # Return a new tibble (a tidy data frame) containing:
     tibble(
+      # The unique year for this subset of data
       Years    = unique(df$Years),
+      # The median of the posterior draws (or sampled values) for this year
       median    = median(df$.value),
+      # The lower bound of the 95% Highest Posterior Density interval (or HPDI)
       lower.HPD = hdi_vals[1],
+      # The upper bound of the HPDI
       upper.HPD = hdi_vals[2]
     )
   })
-
-View(pred_size1)
+#View(pred_size1)
 
 #plot prediction
-#png("years.png", width = 1800, height = 1000, res = 300)
- #years = 
+
+ lyears = 
    ggplot(pred_size1, aes(x = Years, y = median)) +
   geom_line(size = 0.8) +  # thinner line
-  #geom_point(data =esubs, aes(x=Years, y=Cost_km)) +
+  geom_point(data =esubs, aes(x=Years, y=Cost_km)) +
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+     scale_y_continuous(labels = label_scientific()) +  # Scientific notation on y-axis
+  theme_bw() +
+     scale_y_log10() + # Logarithmic scale for y-axis
+   theme(text = element_text(family = "serif", size=7),
+         axis.title = element_blank(),
+         # These lines remove the grid
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())
+ nyears=
+      ggplot(pred_size1, aes(x = Years, y = median)) +
+  geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
      scale_y_continuous(labels = label_scientific()) +  # Scientific notation on y-axis
   theme_bw() +
    theme(text = element_text(family = "serif")) +
   labs(
-    x = "Establishment years",
-    y = "Estimated cost per km²")
-  
- #dev.off()
+    x = "Establishment phase (years)",
+    y = "Estimated establishment cost ($/km²)")
+
+ #Combine and export the inset
+png("years.png", width = 1500, height = 1000, res = 300) 
+#final_plot <- 
+  nyears +
+  inset_element(
+    lyears,
+    left = 0.02, 
+    bottom = 0.4,
+    right = 0.65,
+    top = 0.95)
+dev.off()
+
 ```
-
-
-
-
-
-
 
 ## Bayesian regression with Gamma distribution - maintenance with subs
 
 #### Data preparation
+
 ```{r}
 #using maintenance coded with subs 
 msubs <- read_csv("../Data/msubs.csv")
 #View(msubs)
 #preparing data
-#msubs = msubs |> mutate(Protection_level=factor(Protection_level, 
-                                                #levels=c("Fully protected", "Partially protected")))#, # this will order them rather than going into a
+msubs = msubs |> mutate(Protection_level=factor(Protection_level, 
+                                                levels=c("Fully protected", "Partially protected")), 
+                        Cost_class=factor(Cost_class))#, # this will order them rather than going into a
 summary(msubs)
 
 #Adding a new column for protection level and code it as a as binary --> 1 as fully protected and 0 for partially protected
@@ -410,9 +488,18 @@ msubs$Protection_bin<-msubs$Enforcement*NA
 msubs$Protection_bin[msubs$Protection_level=="Fully protected"]<-1
 msubs$Protection_bin[msubs$Protection_level=="Partially protected"]<-0
 
+#making a subset for each cost class, maitenance, management, administration and enfircement 
+msubs <- msubs |>  
+ subset(Cost_class %in% c("Maintenance"))
+summary(msubs) 
+hist(log(msubs$Cost_km), nclass=75)
+
+#table(as.numeric(msubs$Cost_km),msubs$Cost_class)
+
 ```
 
 #### Exploratory data analysis
+
 ```{r}
 #View(msubs)
 ## Data exploration to see what distribution I can use in the model
@@ -447,24 +534,26 @@ esubs |> ggplot(aes(y=Cost_km, x=Size)) +
 ```
 
 #### Fit the model
+
 ```{r}
 #standardising the cost_km into smaller values
 msubs<- msubs |> 
+   #mutate(lCost_km=log(Cost_km)) |> 
   mutate(sCost_km=Cost_km/10000) |>  # this is to make the priors smaller and more manageable
   mutate(lSize=log(Size))
 #model formula 
 #by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
-form = bf(Cost_km ~ 0 + scale(lSize) + scale(GDP_pc) + scale(Protection_bin) + Administration + Enforcement + Management, family=gaussian)
+form = bf(sCost_km ~ 0 + Administration + Enforcement + Management, family=gaussian)
 # mean for each group and mads for each group for our priors
 msubs |> 
-  summarise(Median=median(Cost_km), MAD=mad(Cost_km))
+  summarise(Median=median(sCost_km), MAD=mad(sCost_km))
 
 #getting standard priors
 get_prior(form, data=msubs)
 
 #setting priors
 priors =# prior(normal(8, 3), class='Intercept') +
-  prior(normal(0,4000), class='b') #within brackets add lb=0
+  prior(normal(0,0.5), class='b') #within brackets add lb=0
 
 # running the model with priors only
 msubs.brm1 = brm(form, 
@@ -500,8 +589,8 @@ msubs.brm2 |>
   wrap_plots()
 #plot cost_km vs l size with a trend line
 # Remove the largest value of Size
-msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
-msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
+#msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
+#msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
 msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
 msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
 ggplot(msubs, aes(x=Size, y=Cost_km)) +
@@ -515,6 +604,7 @@ ggplot(msubs, aes(x=Size, y=Cost_km)) +
 ```
 
 #### MCMC sampling diagnostics
+
 ```{r}
 #trace plot 
 msubs.brm2$fit |> stan_trace()
@@ -534,6 +624,7 @@ msubs.brm2$fit |> stan_dens(separate_chains=TRUE)
 ```
 
 #### Model validation
+
 ```{r}
 #probability check
 msubs.brm2 |> pp_check(type='dens_overlay', ndraws=100) 
@@ -551,6 +642,7 @@ plotResiduals(msubs.resids, quantreg = TRUE)
 ```
 
 #### Results
+
 ```{r}
 # generic summary 
 msubs.brm2 |> summary()
@@ -559,7 +651,7 @@ msubs.brm2 |> summary()
 msubs.brm2 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
-  summarise_draws(median, 
+  summarise_draws(median=~exp(median(.x)+2.42/2), 
                   HDInterval::hdi,
                   rhat, 
                   ess_bulk,
@@ -572,8 +664,8 @@ msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 #we are explaining 10% of the variance with this model -  which should be a pretty good fit for the model
 ```
 
-
 #### Plot results - predictions
+
 ```{r}
 # Step 1: Build raw newdata
 #prediction of the maintenance costs/km2 per year
@@ -603,16 +695,12 @@ View(pred_size2)
 
 ```
 
-
-
-
-
-
-
 ## Summary plots
+
 ### Combining plots
 
 ##### Prediction of costs/km2 with change in size
+
 ```{r}
 #hypothesis 1 
 # Average response at each Size value for maintenance
@@ -662,4 +750,3 @@ plots2 = scales | plots1
 plots2 + plot_annotation(tag_levels = 'A') 
 #dev.off()
 ```
-
