@@ -37,6 +37,7 @@ library(HDInterval)
 library(tibble)
 library(geoR)
 library(scales)
+library(forcats)       #for factor manipulation
 #sourcing functions from Murray's github repository
 source('helperFunctions.R')
 ```
@@ -339,9 +340,9 @@ pred_size <- pred_draws |>
     )
   })
 
-View(pred_size)
+#View(pred_size)
 #producing a predicted ggplot
-lesize = 
+  lesize = 
   ggplot(pred_size, aes(x = lSize, y = median)) +
   geom_line(size = 0.8) +  # thinner line
   geom_point(data=esubs, aes(x=lSize, y=Cost_km)) + 
@@ -351,29 +352,34 @@ lesize =
         axis.title = element_blank(),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
-  scale_y_log10()
-
+  scale_y_log10(
+      labels = label_scientific(),
+      limits = c(1e0, 1e07))
+  
 nesize = 
   ggplot(pred_size, aes(x = lSize, y = median)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   theme_bw() +
-  theme(text = element_text(family = "serif")) +
-  ylim(0, 1.0e+06) + # setting the y limits to make it more readable
-  scale_y_continuous(labels = label_scientific()) +
+  theme(text = element_text(family = "serif")) + 
+  scale_y_continuous(
+    labels = label_scientific(),
+    limits = c(0, 1.0e+06)  # forces the axis to go up to 1e6
+  ) +
   labs(
-    x = "lnSize (ln(km²))",
-    y = "Estmated establishment costs (cost/km²)"
+    x = "lnSize (km²)",
+    y = "Estimated establishment costs (cost/km²)"
   )
 
  #Combine and export the inset
 png("establishment size.png", width = 1500, height = 1000, res = 300) 
 #final_plot <- 
+esize = 
 nesize + 
   inset_element(
     lesize,
-    left = 0.35,
-    bottom = 0.4,
+    left = 0.25,
+    bottom = 0.45,
     right = 0.98,
     top = 0.95
   )
@@ -478,9 +484,9 @@ dev.off()
 msubs <- read_csv("../Data/msubs.csv")
 #View(msubs)
 #preparing data
-msubs = msubs |> mutate(Protection_level=factor(Protection_level, 
-                                                levels=c("Fully protected", "Partially protected")), 
-                        Cost_class=factor(Cost_class))#, # this will order them rather than going into a
+#msubs = msubs |> mutate(Protection_level=factor(Protection_level, 
+ #                                               levels=c("Fully protected", "Partially protected")), 
+  #                      Cost_class=factor(Cost_class))#, # this will order them rather than going into a
 summary(msubs)
 
 #Adding a new column for protection level and code it as a as binary --> 1 as fully protected and 0 for partially protected
@@ -538,22 +544,23 @@ esubs |> ggplot(aes(y=Cost_km, x=Size)) +
 ```{r}
 #standardising the cost_km into smaller values
 msubs<- msubs |> 
-   #mutate(lCost_km=log(Cost_km)) |> 
-  mutate(sCost_km=Cost_km/10000) |>  # this is to make the priors smaller and more manageable
-  mutate(lSize=log(Size))
+   mutate(lCost_km=log(Cost_km)) |> 
+  mutate(lSize=log(Size)) |> 
+  mutate(lGDP_pc=log(GDP_pc)) #standardising the size and gdp to make it easier to interpret the results
 #model formula 
 #by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
-form = bf(sCost_km ~ 0 + Administration + Enforcement + Management, family=gaussian)
+form = bf(lCost_km ~ scale(lSize) + scale(lGDP_pc) + Protection_level, family=gaussian)
 # mean for each group and mads for each group for our priors
 msubs |> 
-  summarise(Median=median(sCost_km), MAD=mad(sCost_km))
+  group_by(Protection_level) |>
+  summarise(Median=median(lCost_km), MAD=mad(lCost_km))
 
 #getting standard priors
 get_prior(form, data=msubs)
 
 #setting priors
-priors =# prior(normal(8, 3), class='Intercept') +
-  prior(normal(0,0.5), class='b') #within brackets add lb=0
+priors = prior(normal(9, 1), class='Intercept') +
+  prior(normal(0,1), class='b') #within brackets add lb=0
 
 # running the model with priors only
 msubs.brm1 = brm(form, 
@@ -587,20 +594,6 @@ msubs.brm2 |>
   conditional_effects() |> 
   plot(points=TRUE) |> 
   wrap_plots()
-#plot cost_km vs l size with a trend line
-# Remove the largest value of Size
-#msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
-#msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
-msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
-msubs <- msubs |> filter(Size < max(Size, na.rm = TRUE))
-ggplot(msubs, aes(x=Size, y=Cost_km)) +
-  geom_point() +
-  geom_smooth(method="glm", method.args = list(family = gaussian(link = "log")), 
-              formula = y ~ x, se = TRUE) +
-  scale_y_log10() + 
-  labs(x="lnSize (km²)", y="Maintenance cost/km² p.a.") +
-  theme_bw() +
-  theme(text = element_text(family = "serif"))
 ```
 
 #### MCMC sampling diagnostics
@@ -651,8 +644,8 @@ msubs.brm2 |> summary()
 msubs.brm2 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
-  summarise_draws(median=~exp(median(.x)+2.42/2), 
-                  HDInterval::hdi,
+  summarise_draws(median=~exp(median(.x)), 
+                  hdi = ~HDInterval::hdi(exp(.x)),
                   rhat, 
                   ess_bulk,
                   Pl=~mean(.x<0), 
@@ -667,31 +660,73 @@ msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 #### Plot results - predictions
 
 ```{r}
-# Step 1: Build raw newdata
 #prediction of the maintenance costs/km2 per year
-pred_size2 <- emmeans(
+pred_draws_m <- emmeans(
   msubs.brm2,
-  ~ Size | Protection_level,
-  at = list(Size = seq(min(msubs$Size), max(msubs$Size), length.out = 100),
-            Management = levels(msubs$Management)[1],       # fix to first level
-            Administration = levels(msubs$Administration)[1],
-            Enforcement = levels(msubs$Enforcement)[1]),
-  type = "response") |> 
-  as.data.frame()
+  ~ lSize,
+  at = list(
+    lSize = seq(min(msubs$lSize), max(msubs$lSize), length.out = 100),
+    GDP_pc = mean(msubs$GDP_pc, na.rm = TRUE)
+  )
+) |>
+  gather_emmeans_draws() |>
+  mutate(.value = exp(.value))  # back-transform from log
 
-View(pred_size2)
+# Now safely summarise per lSize using purrr
+pred_size2 <- pred_draws_m |>
+  group_split(lSize) |>
+  map_dfr(function(df) {
+    hdi_vals <- hdi(df$.value)
+    tibble(
+      lSize     = unique(df$lSize),
+      median    = median(df$.value),
+      lower.HPD = hdi_vals[1],
+      upper.HPD = hdi_vals[2]
+    )
+  })
+
+#View(pred_size2)
 #prediction plot
-#msize = 
+nmsize = 
   ggplot(pred_size2, aes(x = lSize, y = median)) +
   geom_line(size = 0.8) +
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  #scale_y_log10(labels = label_scientific()) +
-  scale_x_continuous(labels = label_scientific()) +  # Scientific notation on x-axis
+  scale_y_continuous(
+    labels = label_scientific(),
+    limits = c(0, 1.0e+06)  # forces the axis to go up to 1e6
+  ) +
   theme_bw() +
   theme(text = element_text(family = "serif")) +
   labs(
     x = "lnSize (km²)",
-    y = "Maintenance cost/km² p.a.")
+    y = "Estimated maintenance costs (cost/km² p.a.)")
+  
+ lmsize = 
+  ggplot(pred_size2, aes(x = lSize, y = median)) +
+    geom_line(size = 0.8) +
+    geom_point(data=msubs, aes(x=lSize, y=Cost_km)) +
+    geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+    scale_y_log10(
+      labels = label_scientific(),
+      limits = c(1e0, 1e07)) +
+    theme_bw() +
+    theme(text = element_text(family = "serif", size=7), 
+        axis.title = element_blank(),
+         # These lines remove the grid
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+  
+  png("maitenance size.png", width = 1500, height = 1000, res = 300) 
+#final_plot <- 
+msize = 
+  nmsize +
+  inset_element(
+    lmsize,
+    left = 0.25,
+    bottom = 0.45,
+    right = 0.98,
+    top = 0.95)
+dev.off()
 
 ```
 
@@ -699,54 +734,254 @@ View(pred_size2)
 
 ### Combining plots
 
-##### Prediction of costs/km2 with change in size
+#### Combinign size plots
+```{r}
+png("size.png", width = 2000, height = 1000, res = 300)
+esize + msize
+dev.off()
+
+```
+#### Size per each protection level - establishment 
+```{r}
+#prediction of the maintenance costs/km2 per year
+pred_draws_e <- emmeans(
+  esubs.brm2,
+  ~ lSize | Protection_level,
+  at = list(
+    lSize = seq(min(esubs$lSize), max(esubs$lSize), length.out = 100),
+    GDP_pc = mean(esubs$GDP_pc, na.rm = TRUE), 
+    Protection_level = unique(esubs$Protection_level))) |>
+  gather_emmeans_draws() |>
+  mutate(.value = exp(.value))  # back-transform from log
+
+# Now safely summarise per lSize using purrr
+pred_size_e <- pred_draws_e |>
+  group_split(lSize, Protection_level) |>
+  map_dfr(function(df) {
+    hdi_vals <- hdi(df$.value)
+    tibble(
+      lSize     = unique(df$lSize),
+      Protection_level = unique(df$Protection_level),
+      median    = median(df$.value),
+      lower.HPD = hdi_vals[1],
+      upper.HPD = hdi_vals[2]
+    )
+  })
+#pred_size2 <- pred_size2 %>%
+ # mutate(Protection_level = fct_recode(Protection_level,
+  #  "Multi-use areas" = "Partially protected",
+   # "Fully Protected Areas" = "Fully protected"
+  #))
+#View(msubs)
+
+
+fpe <- subset(pred_size_e, Protection_level == "Fully protected")
+mubse <- subset(pred_size_e, Protection_level == "Partially protected")
+# Create the plot
+nesize_pl <- ggplot() +
+  # Fully protected areas
+  geom_line(data = fpe, aes(x = lSize, y = median, color = "Fully protected areas"), size = 0.8) +
+  geom_ribbon(data = fpe, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD, fill = "Fully protected areas"), alpha = 0.2) +
+  # Partially protected areas
+  geom_line(data = mubse, aes(x = lSize, y = median, color = "Partially protected areas"), size = 0.8) +
+  geom_ribbon(data = mubse, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD, fill = "Partially protected areas"), alpha = 0.2) +
+  # Customize scales
+  scale_color_manual(values = c("Fully protected areas" = "#1b9e77", "Partially protected areas" = "#d95f02")) +
+  scale_fill_manual(values = c("Fully protected areas" = "#1b9e77", "Partially protected areas" = "#d95f02")) +
+  # Scientific notation for y-axis
+  scale_y_continuous(labels = scales::label_scientific()) +
+  # Apply theme
+  theme_bw() +
+  theme(text = element_text(family = "serif")) +
+  # Labels
+  labs(
+    x = "lnSize (km²)",
+    y = "Estimated maintenance costs (cost/km² p.a.)",
+    color = "Protection status",
+    fill = "Protection status"
+  )
+
+lesize_pl = 
+  ggplot() +
+  geom_line(data = fpe, aes(x = lSize, y = median), color = "#1b9e77", size = 0.8) +
+  geom_line(data = mubse, aes(x = lSize, y = median), color = "#d95f02", size = 0.8) +
+  geom_ribbon(data = fpe, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
+              fill = "#1b9e77", alpha = 0.2, color = NA) +
+  geom_ribbon(data = mubse, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
+              fill = "#d95f02", alpha = 0.2, color = NA) +
+  geom_point(data = esubs, aes(x = lSize, y = Cost_km, color = Protection_level),
+             show.legend = FALSE) +
+  scale_color_manual(
+    values = c("Fully protected" = "#1b9e77", "Partially protected" = "#d95f02"),
+    labels = c("Fully protected" = "Fully protected areas",
+               "Partially protected" = "Multi-use areas")
+  ) +
+  scale_y_log10(labels = scales::label_scientific(), limits = c(1e0, 1.0e+07)) +
+  theme_bw() +
+  theme(text = element_text(family = "serif", size=7),
+         axis.title = element_blank(),
+         # These lines remove the grid
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()) 
+  #labs(
+   # x = "lnSize (km²)",
+    #y = "Estimated maintenance costs (cost/km² p.a.)",
+    #color = "Protection status")
+  
+  nesize_pl +
+  inset_element(
+    lesize_pl,
+     left = 0.25,
+    bottom = 0.45,
+    right = 0.98,
+    top = 0.95)
+
+```
+
+
+
+#### Size per each protection level - maintenance
 
 ```{r}
-#hypothesis 1 
-# Average response at each Size value for maintenance
-pred_maint <- pred_size2 |> 
-  group_by(lSize) |> 
-  summarise(
-    response = mean(response),
-    lower.HPD = mean(lower.HPD),
-    upper.HPD = mean(upper.HPD)
-  )
-# Establishment cost prediction
+#prediction of the maintenance costs/km2 per year
+pred_draws_m <- emmeans(
+  msubs.brm2,
+  ~ lSize | Protection_level,
+  at = list(
+    lSize = seq(min(msubs$lSize), max(msubs$lSize), length.out = 100),
+    GDP_pc = mean(msubs$GDP_pc, na.rm = TRUE), 
+    Protection_level = unique(msubs$Protection_level))) |>
+  gather_emmeans_draws() |>
+  mutate(.value = exp(.value))  # back-transform from log
 
-#adding 'type' so I can assign different colors to them 
-pred_maint$type <- "Maintenance"
-pred_size$type <- "Establishment"
-#combine the two into one dataframe
-pred_combined <- bind_rows(pred_maint, pred_estab)
+# Now safely summarise per lSize using purrr
+pred_size2 <- pred_draws_m |>
+  group_split(lSize, Protection_level) |>
+  map_dfr(function(df) {
+    hdi_vals <- hdi(df$.value)
+    tibble(
+      lSize     = unique(df$lSize),
+      Protection_level = unique(df$Protection_level),
+      median    = median(df$.value),
+      lower.HPD = hdi_vals[1],
+      upper.HPD = hdi_vals[2]
+    )
+  })
+#pred_size2 <- pred_size2 %>%
+ # mutate(Protection_level = fct_recode(Protection_level,
+  #  "Multi-use areas" = "Partially protected",
+   # "Fully Protected Areas" = "Fully protected"
+  #))
+#View(msubs)
 
-# Plot
-#png("h1.png", width = 1400, height = 800, res = 300)
-#scales = 
-  ggplot(pred_combined, aes(x = Size, y = response, color = type, fill = type)) +
-  geom_line(size = 0.8) +
-  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  scale_x_continuous(labels = label_scientific()) +
-  #scale_y_log10(labels = label_scientific()) +
+
+fp <- subset(pred_size2, Protection_level == "Fully protected")
+mubs <- subset(pred_size2, Protection_level == "Partially protected")
+#nmsize_pl = 
+  ggplot() +
+  geom_line(data = fp, aes(x = lSize, y = median), color = "#1b9e77", size = 0.8) +
+  geom_line(data = mubs, aes(x = lSize, y = median), color = "#d95f02", size = 0.8) +
+  geom_ribbon(data = fp,aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD), fill = "#1b9e77", alpha = 0.2, color = NA) +
+  geom_ribbon(data = mubs,aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD), fill = "#d95f02", alpha = 0.2, color = NA) +
+  #geom_point(data = msubs, aes(x = lSize, y = Cost_km, color = Protection_level), show.legend = NA) +
+  scale_color_manual(values = c("Fully protected" = "#1b9e77", "Partially protected" = "#d95f02"), 
+                     labels = c("Fully protected" = "Fully protected areas", "Partially protected" = "Multi-use areas")) +
+  scale_y_continuous(labels = scales::label_scientific(), limits = c(0, 1.0e+06)) +
   theme_bw() +
-  theme(text = element_text(family = "serif"),
-    legend.position = c(0.95, 0.98),  # Top right corner
-    legend.justification = c("right", "top"),  # Anchor to top right
-    legend.background = element_rect(fill = "transparent", color = NA)) +
+  theme(text = element_text(family = "serif")) +
   labs(
-    x = "Size (km²)",
-    y = "Cost/km²",
-    color = "Cost type",
-    fill = "Cost type"
-  ) +
-  scale_color_manual(values = c("Maintenance" = "#0072B2", "Establishment" = "#D55E00")) +
-  scale_fill_manual(values = c("Maintenance" = "#0072B2", "Establishment" = "#D55E00"))
-#dev.off()
-#the prediction becomes very close to zero because we are using a log link distribution but never negative --> this is fro when I am not logging 10 the y axis
+    x = "lnSize (km²)",
+    y = "Estimated maintenance costs (cost/km² p.a.)",
+    color = "Protection status")
 
-#hypothesis n 4
-#png("economiesofscales.png", width = 3300, height = 1800, res = 300)  # adjust as needed
-plots1 = esize / msize + plot_layout(guides = 'collect') 
-plots2 = scales | plots1
-plots2 + plot_annotation(tag_levels = 'A') 
-#dev.off()
+#lmsize_pl = 
+  ggplot() +
+  geom_line(data = fp, aes(x = lSize, y = median), color = "#1b9e77", size = 0.8) +
+  geom_line(data = mubs, aes(x = lSize, y = median), color = "#d95f02", size = 0.8) +
+  geom_ribbon(data = fp, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
+              fill = "#1b9e77", alpha = 0.2, color = NA) +
+  geom_ribbon(data = mubs, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
+              fill = "#d95f02", alpha = 0.2, color = NA) +
+  geom_point(data = msubs, aes(x = lSize, y = Cost_km, color = Protection_level),
+             show.legend = FALSE) +
+  scale_color_manual(
+    values = c("Fully protected" = "#1b9e77", "Partially protected" = "#d95f02"),
+    labels = c("Fully protected" = "Fully protected areas",
+               "Partially protected" = "Multi-use areas")
+  ) +
+  scale_y_log10(labels = scales::label_scientific(), limits = c(1e0, 1.0e+07)) +
+  theme_bw() +
+  theme(text = element_text(family = "serif")) +
+  labs(
+    x = "lnSize (km²)",
+    y = "Estimated maintenance costs (cost/km² p.a.)",
+    color = "Protection status"
+  )
+
+
 ```
+### GDP plot
+
+```{r}
+#backtrnasformed the response variable to identity (or absolute values) as well as intervals 
+#filter the nas
+pred_draws_GDP <- emmeans(
+  msubs.brm2,
+  ~ lGDP_pc,
+  at = list(
+   lGDP_pc = seq(min(msubs$lGDP_pc), max(msubs$lGDP_pc), length.out = 100),
+    lSize = mean(msubs$lSize, na.rm = TRUE)
+  )
+) |>
+  gather_emmeans_draws() |>
+  mutate(.value = exp(.value))  # back-transform from log
+
+# Now safely summarise per lSize using purrr
+pred_GDP <- pred_draws_GDP |>
+  group_split(lGDP_pc) |>
+  map_dfr(function(df) {
+    hdi_vals <- hdi(df$.value)
+    tibble(
+      lGDP_pc     = unique(df$lGDP_pc),
+      median    = median(df$.value),
+      lower.HPD = hdi_vals[1],
+      upper.HPD = hdi_vals[2]
+    )
+  })
+
+#View(pred_GDP)
+#producing a predicted ggplot
+
+#neGDP_pc = 
+  ggplot(pred_GDP, aes(x = lGDP_pc, y = median)) +
+  geom_line(size = 0.8) +  # thinner line
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+  #geom_point(data=msubs, aes(x=GDP_pc, y=Cost_km)) +
+  theme_bw() +
+  theme(text = element_text(family = "serif")) + 
+  scale_y_continuous(
+    labels = label_scientific(),
+    limits = c(0, 4.0e+04)  # forces the axis to go up to 1e6
+  ) +
+  labs(
+    x = "GDP per capita (2023 USD)",
+    y = "Estimated maitenance costs (cost/km² p.a.)"
+  )
+  #leGDP_pc = 
+ ggplot(pred_GDP, aes(x = lGDP_pc, y = median)) +
+  geom_line(size = 0.8) +  # thinner line
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+  geom_point(data=msubs, aes(x=lGDP_pc, y=Cost_km)) +
+  theme_bw() +
+  theme(text = element_text(family = "serif")) +
+  scale_y_log10() +
+  labs(
+    x = "GDP per capita (2023 USD)",
+    y = "Estimated maitenance costs (cost/km² p.a.)"
+  )
+  
+png("maintenance GDP.png", width = 1500, height = 1000, res = 300) 
+dev.off()
+```
+
+
