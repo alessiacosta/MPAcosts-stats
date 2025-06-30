@@ -69,7 +69,7 @@ ggplot() +
   # Overlay the coastline in black
   geom_sf(data = coastline_data, color = "black", fill = NA) +  
   # Plot your data points
-  geom_point(data = fig1, aes(x = Longitude, y = Latitude), color = "firebrick3", size = 5) +  # color #008080
+  geom_point(data = fig1, aes(x = Longitude, y = Latitude), color = "#0F4D92", size = 5) +  # color #008080 #3B7CA3
   # Set coordinate system
   coord_sf() +
   # Adjust theme
@@ -85,6 +85,40 @@ ggplot() +
 dev.off()
 
 ```
+```{r}
+# Get world map data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+png("Philippines.png", width = 2500, height = 2000, res = 150)
+# Create the world map
+# Load the coastline data from rnaturalearth
+coastline_data <- ne_coastline(scale = "medium", returnclass = "sf")
+
+# Create the plot
+ggplot() +  
+  # Plot countries in a very light grey
+  geom_sf(data = world, fill = "grey95", color = NA) +  
+  # Overlay the coastline in black
+  geom_sf(data = coastline_data, color = "black", fill = NA) +  
+  # Plot your data points
+  geom_point(data = fig1, aes(x = Longitude, y = Latitude), color = "goldenrod1", size = 8) +  # color #008080
+  # Set coordinate system
+  coord_sf() +
+  #set the corrdinate to cover philippines only
+  xlim(117, 130) +
+  ylim(4, 22) +
+  # Adjust theme
+  theme_minimal() +  
+  theme(
+    axis.text = element_text(size = 24),
+    axis.title = element_blank(),  # Removes axis titles
+    axis.line.x = element_line(color = "black", size = 0.5),
+    axis.line.y = element_line(color = "black", size = 0.5),
+    axis.ticks = element_line(color = "black", size = 0.5),
+    panel.grid = element_blank())
+dev.off()
+```
+
 
 # Statistics
 
@@ -531,11 +565,10 @@ esubs |> ggplot(aes(y=Cost_km, x=Size)) +
 #standardising the cost_km into smaller values
 msubs<- msubs |> 
    mutate(lCost_km=log(Cost_km)) |> 
-  mutate(lSize=log(Size)) |> 
-  mutate(lGDP_pc=log(GDP_pc)) #standardising the size and gdp to make it easier to interpret the results
+  mutate(lSize=log(Size))
 #model formula 
 #by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
-form = bf(lCost_km ~ scale(lSize) + scale(lGDP_pc) + Protection_level, family=gaussian)
+form = bf(lCost_km ~ scale(lSize) + scale(GDP_pc) + Protection_level, family=gaussian)
 # mean for each group and mads for each group for our priors
 msubs |> 
   group_by(Protection_level) |>
@@ -773,8 +806,8 @@ nesize_pl <-
   geom_line(data = mubse, aes(x = lSize, y = median, color = "Multi-use areas"), size = 0.8) +
   geom_ribbon(data = mubse, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD, fill = "Multi-use areas"), alpha = 0.2) +
   # Customize scales
-  scale_color_manual(values = c("Fully protected areas" = "#1b9e77", "Multi-use areas" = "#d95f02")) +
-  scale_fill_manual(values = c("Fully protected areas" = "#1b9e77", "Multi-use areas" = "#d95f02")) +
+  scale_color_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
+  scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   # Scientific notation for y-axis
   scale_y_continuous(labels = scales::label_scientific(), limits=c(0, 1.e06)) +
   # Apply theme
@@ -794,16 +827,16 @@ nesize_pl <-
 
 lesize_pl = 
   ggplot() +
-  geom_line(data = fpe, aes(x = lSize, y = median), color = "#1b9e77", size = 0.8) +
-  geom_line(data = mubse, aes(x = lSize, y = median), color = "#d95f02", size = 0.8) +
+  geom_line(data = fpe, aes(x = lSize, y = median), color = "#0072B2", size = 0.8) +
+  geom_line(data = mubse, aes(x = lSize, y = median), color = "#E69F00", size = 0.8) +
   geom_ribbon(data = fpe, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
-              fill = "#1b9e77", alpha = 0.2, color = NA) +
+              fill = "#0072B2", alpha = 0.2, color = NA) +
   geom_ribbon(data = mubse, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
-              fill = "#d95f02", alpha = 0.2, color = NA) +
+              fill = "#E69F00", alpha = 0.2, color = NA) +
   geom_point(data = esubs, aes(x = lSize, y = Cost_km, color = Protection_level),
              show.legend = FALSE) +
   scale_color_manual(
-    values = c("Fully protected" = "#1b9e77", "Partially protected" = "#d95f02"),
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#E69F00"),
     labels = c("Fully protected" = "Fully protected areas",
                "Partially protected" = "Multi-use areas")
   ) +
@@ -877,8 +910,8 @@ nmsize_pl =
   geom_line(data = mubs, aes(x = lSize, y = median, color = "Multi-use areas"), size = 0.8) +
   geom_ribbon(data = mubs, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD, fill = "Multi-use areas"), alpha = 0.2) +
   # Customize scales
-  scale_color_manual(values = c("Fully protected areas" = "#1b9e77", "Multi-use areas" = "#d95f02")) +
-  scale_fill_manual(values = c("Fully protected areas" = "#1b9e77", "Multi-use areas" = "#d95f02")) +
+  scale_color_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
+  scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   # Scientific notation for y-axis
   scale_y_continuous(labels = scales::label_scientific(), limits=c(0, 1.e06)) +
   # Apply theme
@@ -889,7 +922,7 @@ nmsize_pl =
   # Labels
   labs(
     x = "lnSize (km²)",
-    y = "Estimated establishment costs (cost/km²)",
+    y = "Estimated maitenance costs (cost/km² p.a.)",
     color = "Protection status",
     fill = "Protection status") +
   coord_cartesian(clip="off") +
@@ -898,16 +931,16 @@ print(nmsize_pl)
 
 lmsize_pl = 
   ggplot() +
-  geom_line(data = fp, aes(x = lSize, y = median), color = "#1b9e77", size = 0.8) +
-  geom_line(data = mubs, aes(x = lSize, y = median), color = "#d95f02", size = 0.8) +
+  geom_line(data = fp, aes(x = lSize, y = median), color = "#0072B2", size = 0.8) +
+  geom_line(data = mubs, aes(x = lSize, y = median), color = "#E69F00", size = 0.8) +
   geom_ribbon(data = fp, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
-              fill = "#1b9e77", alpha = 0.2, color = NA) +
+              fill = "#0072B2", alpha = 0.2, color = NA) +
   geom_ribbon(data = mubs, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
-              fill = "#d95f02", alpha = 0.2, color = NA) +
+              fill = "#E69F00", alpha = 0.2, color = NA) +
   geom_point(data = msubs, aes(x = lSize, y = Cost_km, color = Protection_level),
              show.legend = FALSE) +
   scale_color_manual(
-    values = c("Fully protected" = "#1b9e77", "Partially protected" = "#d95f02"),
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#E69F00"),
     labels = c("Fully protected" = "Fully protected areas",
                "Partially protected" = "Multi-use areas")
   ) +
@@ -944,11 +977,13 @@ dev.off()
 ```{r}
 #backtrnasformed the response variable to identity (or absolute values) as well as intervals 
 #filter the nas
+msubs <- msubs |> 
+  filter(!is.na(GDP_pc))
 pred_draws_GDP <- emmeans(
   msubs.brm2,
-  ~ lGDP_pc,
+  ~ GDP_pc,
   at = list(
-   lGDP_pc = seq(min(msubs$lGDP_pc), max(msubs$lGDP_pc), length.out = 100),
+   GDP_pc = seq(min(msubs$GDP_pc), max(msubs$GDP_pc), length.out = 100),
     lSize = mean(msubs$lSize, na.rm = TRUE)
   )
 ) |>
@@ -957,49 +992,59 @@ pred_draws_GDP <- emmeans(
 
 # Now safely summarise per lSize using purrr
 pred_GDP <- pred_draws_GDP |>
-  group_split(lGDP_pc) |>
+  group_split(GDP_pc) |>
   map_dfr(function(df) {
     hdi_vals <- hdi(df$.value)
     tibble(
-      lGDP_pc     = unique(df$lGDP_pc),
+      GDP_pc     = unique(df$GDP_pc),
       median    = median(df$.value),
       lower.HPD = hdi_vals[1],
       upper.HPD = hdi_vals[2]
     )
   })
 
-#View(pred_GDP)
+View(pred_GDP)
 #producing a predicted ggplot
 
-#neGDP_pc = 
-  ggplot(pred_GDP, aes(x = lGDP_pc, y = median)) +
+neGDP_pc = 
+  ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
+    geom_line(size = 0.8) +
+    geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+    scale_y_continuous(
+      labels = label_scientific()) +
+    scale_x_continuous(
+      labels = label_scientific()) +
+    theme_bw() +
+    theme(text = element_text(family = "serif"), 
+          panel.grid.minor = element_blank(), 
+          panel.grid.major=element_blank()) +
+    labs(
+      x = "GDP per capita (2023 USD)",
+      y = "Estimated maintenance costs (cost/km² p.a.)")
+  
+leGDP_pc = 
+ ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  #geom_point(data=msubs, aes(x=GDP_pc, y=Cost_km)) +
+  geom_point(data=msubs, aes(x=GDP_pc, y=Cost_km)) +
   theme_bw() +
-  theme(text = element_text(family = "serif")) + 
-  scale_y_continuous(
-    labels = label_scientific(),
-    limits = c(0, 4.0e+04)  # forces the axis to go up to 1e6
-  ) +
-  labs(
-    x = "GDP per capita (2023 USD)",
-    y = "Estimated maitenance costs (cost/km² p.a.)"
-  )
-  #leGDP_pc = 
- ggplot(pred_GDP, aes(x = lGDP_pc, y = median)) +
-  geom_line(size = 0.8) +  # thinner line
-  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  geom_point(data=msubs, aes(x=lGDP_pc, y=Cost_km)) +
-  theme_bw() +
-  theme(text = element_text(family = "serif")) +
+  theme(text = element_text(family = "serif"), 
+        axis.title = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
   scale_y_log10() +
-  labs(
-    x = "GDP per capita (2023 USD)",
-    y = "Estimated maitenance costs (cost/km² p.a.)"
-  )
+  scale_x_continuous(
+    labels = label_scientific())
   
 png("maintenance GDP.png", width = 1500, height = 1000, res = 300) 
+#GDP = 
+  neGDP_pc +
+  inset_element(
+    leGDP_pc,
+    left = 0.02, 
+    bottom = 0.55,
+    right = 0.5,
+    top = 0.95)
 dev.off()
 ```
 
