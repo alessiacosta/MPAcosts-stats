@@ -36,8 +36,8 @@ library(purrr)
 library(HDInterval)
 library(tibble)
 library(geoR)
-library(scales)
-library(forcats)       #for factor manipulation
+library(scales)       #for scientific notation on axes
+library(forcats)      #for factor manipulation
 #sourcing functions from Murray's github repository
 source('helperFunctions.R')
 ```
@@ -454,7 +454,6 @@ pred_size1 <- pred_draws1 |>
 #View(pred_size1)
 
 #plot prediction
-
  lyears = 
    ggplot(pred_size1, aes(x = Years, y = median)) +
   geom_line(size = 0.8) +  # thinner line
@@ -474,9 +473,7 @@ pred_size1 <- pred_draws1 |>
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
      scale_y_continuous(labels = label_scientific()) +  # Scientific notation on y-axis
   theme_bw() +
-   theme(text = element_text(family = "serif"), 
-         panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()) +
+   theme(text = element_text(family = "serif")) +
   labs(
     x = "Establishment phase (years)",
     y = "Estimated establishment cost ($/km²)")
