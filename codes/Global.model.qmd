@@ -2,18 +2,20 @@
 title: "Global prediction"
 format: html
 ---
+
 # Loading packages
+
 ```{r}
 library(readr)
 library(dplyr)
 library(tidyverse)
-library(lubridate) # helps formatting the dates - form me cleaned the dates from ymd time into only year
+library(lubridate) # helps formatting the dates - form cleaned the dates from ymd time into only year
 library(scales) # helps with the scientific notation
 library(writexl) # helps with parallel processing
 ```
 
-
 # Loading the dataset
+
 ```{r}
 # Importing the data
 MPA.Atlas <- read_csv("../Data/mpatlas_export_nogeo_202503/mpatlas_export_nogeo_202503.csv")
@@ -35,6 +37,7 @@ remaining_area_km2 <- target_area_km2 - initial_area_km2# Calculate how much add
 ```
 
 ## Scenario 1: Total establishment costs of 30% coverage - using years vector based on the data I have collected
+
 ```{r}
 establishment_years <- c(1, 2, 6, 9)# Define the establishment period (in years)
 
@@ -116,7 +119,9 @@ ggplot(combined_results, aes(x = cumulative_percent, y = cumulative_cost / 1e9, 
 #dev.off()
 
 ```
+
 ## Scenario 1: Total establishment costs of 30% coverage - using years vector based on the data I calculated from the MPAtlas downloaded data
+
 ```{r}
 #cleaning data first - extracting three columns from the MPA dataset: proposed date, designated date and wdpa_id
 mpa_years <- MPA.Atlas |>
@@ -224,6 +229,7 @@ dev.off()
 ```
 
 ## Scenario 2: How long is it going to take to reach 30% coverage
+
 ```{r}
 establishment_years <- 4 # Define the establishment period (in years) - using 4 because it is the median from the data I have
 #Cleaning data first - calculating the annual number of mpas per year or the % coverage per year
@@ -343,6 +349,7 @@ dev.off()
 ```
 
 Scenario 3: Maintenance costs for current size distribution of MPAs
+
 ```{r}
 #Calculate the initial management costs at 8.3% coverage based on the estimates from Brander et al., 2020 - based on 10% cover NPV 
 # This will give me a total cost for the 10% coverage 
@@ -431,6 +438,7 @@ dev.off()
 ```
 
 ## Scenario 4: Reach 30% coverage by 2030
+
 ```{r}
 # Define the target year
 target_year <- 2030 # Define the target year for 30% coverage
@@ -443,6 +451,3 @@ annual_percent_needed <- annual_area_needed/ global_ocean_area * 100 # Calculate
 # Print the results
 cat("Annual area needed to reach 30% coverage:", annual_area_needed, "km²\n")
 ```
-
-
-

@@ -85,6 +85,7 @@ ggplot() +
 dev.off()
 
 ```
+
 ```{r}
 # Get world map data
 world <- ne_countries(scale = "medium", returnclass = "sf")
@@ -119,10 +120,9 @@ ggplot() +
 dev.off()
 ```
 
-
 # Statistics
 
-## Bayesian regression with Gamma distribution - establishment
+## Bayesian regression with Gaussian distribution - establishment
 
 #### Data preparation
 
@@ -332,7 +332,14 @@ esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 
 #### Plot results - predictions
 
+##### Plotting results for MPA size
 ```{r}
+#removing NAs --> there is an NA row in line 24 for some unknown reason
+esubs <- esubs |> 
+  filter(!is.na(Years), 
+         !is.na(lSize), 
+         !is.na(Cost_km), 
+         !is.na(GDP_pc))
 #backtrnasformed the response variable to identity (or absolute values) as well as intervals 
 pred_draws <- emmeans(
   esubs.brm2,
@@ -386,11 +393,11 @@ nesize =
   ) +
   labs(
     x = "lnSize (km²)",
-    y = "Estimated establishment costs (cost/km²)"
+    y = "Estimated establishment costs ($/km²)"
   )
 
  #Combine and export the inset
-png("establishment size.png", width = 1500, height = 1000, res = 300) 
+png("establishment size.png", width = 1000, height = 1300, res = 300) 
 #final_plot <- 
 esize = 
 nesize + 
@@ -402,7 +409,10 @@ nesize +
     top = 0.95
   )
 dev.off()
+```
 
+##### Generating prediction data dateaset
+```{r}
 # Generate prediction data
 #remove nas from the data
 esubs <- esubs |> 
@@ -452,8 +462,12 @@ pred_size1 <- pred_draws1 |>
     )
   })
 #View(pred_size1)
+```
 
+##### Plotting prediction for years 
+```{r}
 #plot prediction
+# log transformed axis
  lyears = 
    ggplot(pred_size1, aes(x = Years, y = median)) +
   geom_line(size = 0.8) +  # thinner line
@@ -467,6 +481,7 @@ pred_size1 <- pred_draws1 |>
          # These lines remove the grid
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank())
+#untranformed data
  nyears=
       ggplot(pred_size1, aes(x = Years, y = median)) +
   geom_line(size = 0.8) +  # thinner line
@@ -492,7 +507,7 @@ dev.off()
 
 ```
 
-## Bayesian regression with Gamma distribution - maintenance with subs
+## Bayesian regression with Gaussian distribution - maintenance with subs
 
 #### Data preparation
 
@@ -511,12 +526,12 @@ msubs$Protection_bin<-msubs$Enforcement*NA
 msubs$Protection_bin[msubs$Protection_level=="Fully protected"]<-1
 msubs$Protection_bin[msubs$Protection_level=="Partially protected"]<-0
 
-#making a subset for each cost class, maitenance, management, administration and enfircement 
+#making a subset for each cost class, maitenance, management, administration and enforcement 
 msubs <- msubs |>  
  subset(Cost_class %in% c("Maintenance"))
 summary(msubs) 
 hist(log(msubs$Cost_km), nclass=75)
-
+View(msubs)
 #table(as.numeric(msubs$Cost_km),msubs$Cost_class)
 
 ```
@@ -715,7 +730,7 @@ nmsize =
   theme(text = element_text(family = "serif")) +
   labs(
     x = "lnSize (km²)",
-    y = "Estimated maintenance costs (cost/km² p.a.)")
+    y = "Estimated maintenance costs ($/km² p.a.)")
   
  lmsize = 
   ggplot(pred_size2, aes(x = lSize, y = median)) +
@@ -732,9 +747,8 @@ nmsize =
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
   
-  png("maitenance size.png", width = 1500, height = 1000, res = 300) 
-#final_plot <- 
-msize = 
+  png("maitenance size.png", width = 1000, height = 1200, res = 300) 
+#msize = 
   nmsize +
   inset_element(
     lmsize,
@@ -751,13 +765,16 @@ dev.off()
 ### Combining plots
 
 #### Combinign size plots
+
 ```{r}
 png("size.png", width = 2000, height = 1000, res = 300)
 esize + msize
 dev.off()
 
 ```
-#### Size per each protection level - establishment 
+
+#### Size per each protection level - establishment
+
 ```{r}
 #prediction of the maintenance costs/km2 per year
 pred_draws_e <- emmeans(
@@ -810,18 +827,18 @@ nesize_pl <-
   # Apply theme
   theme_bw() +
   theme(text = element_text(family = "serif"), 
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), 
+        #panel.grid.major = element_blank(),
+        #panel.grid.minor = element_blank(), 
         legend.position = "none") +
   # Labels
   labs(
     x = "lnSize (km²)",
-    y = "Estimated establishment costs (cost/km²)",
-    color = "Protection status",
-    fill = "Protection status") +
+    y = "Estimated establishment costs ($/km²)",
+    color = "Degree of Protection",
+    fill = "Degree of Protection") +
   coord_cartesian(clip="off") +
   annotate("text", x=-Inf, y=Inf, label="A", hjust=4.5, vjust=0.8, size=5, fontface="bold", family='serif')
-
+#transformed axis
 lesize_pl = 
   ggplot() +
   geom_line(data = fpe, aes(x = lSize, y = median), color = "#0072B2", size = 0.8) +
@@ -858,8 +875,6 @@ tot_e <- nesize_pl +
     top = 0.95)
 
 ```
-
-
 
 #### Size per each protection level - maintenance
 
@@ -898,6 +913,8 @@ pred_size2 <- pred_draws_m |>
 
 fp <- subset(pred_size2, Protection_level == "Fully protected")
 mubs <- subset(pred_size2, Protection_level == "Partially protected")
+
+#untransformed axis
 nmsize_pl = 
   ggplot() +
   # Fully protected areas
@@ -913,19 +930,20 @@ nmsize_pl =
   scale_y_continuous(labels = scales::label_scientific(), limits=c(0, 1.e06)) +
   # Apply theme
   theme_bw() +
-  theme(text = element_text(family = "serif"), 
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank()) +
+  theme(text = element_text(family = "serif")) + #, 
+        #panel.grid.major = element_blank(),
+        #panel.grid.minor = element_blank()) +
   # Labels
   labs(
     x = "lnSize (km²)",
-    y = "Estimated maitenance costs (cost/km² p.a.)",
-    color = "Protection status",
-    fill = "Protection status") +
+    y = "Estimated maitenance costs ($/km² p.a.)",
+    color = "Degree of protection",
+    fill = "Degree of protection") +
   coord_cartesian(clip="off") +
   annotate("text", x=-Inf, y=Inf, label="B", hjust=4.5, vjust=0.8, size=5, fontface="bold", family='serif')
 print(nmsize_pl)
 
+#transformed axis
 lmsize_pl = 
   ggplot() +
   geom_line(data = fp, aes(x = lSize, y = median), color = "#0072B2", size = 0.8) +
@@ -958,7 +976,9 @@ tot_m <- nmsize_pl +
     top = 0.95)
 
 ```
+
 #### Combinign size plots
+
 ```{r}
 # Remove legends from individual plots
 png("protection level size.png", width = 2500, height = 1300, res = 300)
@@ -966,8 +986,6 @@ combined_plot <- tot_e + tot_m
 print(combined_plot)
 dev.off()
 ```
-
-
 
 ### GDP plot
 
@@ -1002,7 +1020,7 @@ pred_GDP <- pred_draws_GDP |>
 
 View(pred_GDP)
 #producing a predicted ggplot
-
+#untransformed axis
 neGDP_pc = 
   ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
     geom_line(size = 0.8) +
@@ -1012,13 +1030,15 @@ neGDP_pc =
     scale_x_continuous(
       labels = label_scientific()) +
     theme_bw() +
-    theme(text = element_text(family = "serif"), 
-          panel.grid.minor = element_blank(), 
-          panel.grid.major=element_blank()) +
+    theme(text = element_text(family = "serif") #,   
+          #panel.grid.minor = element_blank(), 
+          #panel.grid.major=element_blank()) +
+          ) +
     labs(
-      x = "GDP per capita (2023 USD)",
-      y = "Estimated maintenance costs (cost/km² p.a.)")
-  
+      x = "GDP per capita (2024 USD)",
+      y = "Estimated maintenance costs ($/km² p.a.)")
+
+# transformed axis  
 leGDP_pc = 
  ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
   geom_line(size = 0.8) +  # thinner line
@@ -1033,7 +1053,7 @@ leGDP_pc =
   scale_x_continuous(
     labels = label_scientific())
   
-png("maintenance GDP.png", width = 1500, height = 1000, res = 300) 
+png("maintenance GDP.png", width = 1500, height = 1200, res = 300) 
 #GDP = 
   neGDP_pc +
   inset_element(
@@ -1044,5 +1064,3 @@ png("maintenance GDP.png", width = 1500, height = 1000, res = 300)
     top = 0.95)
 dev.off()
 ```
-
-

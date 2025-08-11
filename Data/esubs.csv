@@ -1,23 +1,25 @@
-﻿ID,Cost_class,Cost_type,Cost_km,Size,Years,GDP_pc,Protection_level
-MSZ11,Establishment,package,174580.0,0.2,3,"5,912.00",Fully protected
-MSZ11,Establishment,package,42703.3,0.3,1.5,"5,912.00",Partially protected
-MSZ11,Establishment,package,5389218.0,0.5,8,"1,903.00",Fully protected
-MSZ11,Establishment,package,19882.9,0.7,2.5,"5,912.00",Partially protected
-MSZ11,Establishment,package,30968.0,1,2,"5,912.00",Fully protected
-MSZ11,Establishment,package,17060.0,1.6,2,"5,912.00",Fully protected
-MSZ11,Establishment,package,7763.9,1.8,1,"5,912.00",Fully protected
-MSZ11,Establishment,package,108996.1,8.7,6,"15,819.00",Partially protected
-MSZ11,Establishment,package,72169.5,27,9,"15,819.00",Partially protected
-MSZ11,Establishment,package,387.2,65018,9.5,"10,795.00",Partially protected
-MSZ11,Establishment,package,69.0,246608,6,"128,605.00",Partially protected
-MSZ11,Establishment,package,163.5,362100,9,"128,605.00",Fully protected
-RNC15,Establishment,package,70327.5,8.54,17.0,"75,018.00",Fully protected
-GF13,Establishment,package,24699.7,2197,7.0,"128,605.00",Partially protected
-SK23,Establishment,package,40219.0,44.337,12.0,"7,577.00",Partially protected
-XS17,Establishment,package,13613.8,250,5.0,"6,653.00",Partially protected
-PB18,Establishment,pa,92354,0.75,,3515.24,Partially protected
-PB18,Establishment,pa,3426.142857,28,4,21668.38,Fully protected
-H13,Establishment,package,28.21447475,990000,3,"100,717.00",Partially protected
-E14,Establishment,package,2491632.516,3.2698,2,10520.44415,Partially protected
-GL14,Implementation,package,259306.9671,337.3,5,"1,903.00",Partially protected
-KVB10,Establishment,package,2259.775,160,4,"6,653.00",Partially protected
+﻿ID,MPA_name,Country,Cost_class,Cost_type,Cost_km,Size,Years,GDP_pc,Protection_level
+MSZ11,Bibilik MPA,Philippines,Establishment,package,174580,0.2,3,3984.831539,Fully protected
+MSZ11,Talisay MPA,Philippines,Establishment,package,42703.3,0.3,1.5,3984.831539,Partially protected
+MSZ11,CHICOP,Tanzania ,Establishment,package,5389218,0.5,8,1185.745483,Fully protected
+MSZ11,Villahermosa MS,Philippines,Establishment,package,19882.9,0.7,2.5,3984.831539,Partially protected
+MSZ11,Tambunan MPA,Philippines,Establishment,package,30968,1,2,3984.831539,Fully protected
+MSZ11,MISSTA MPA,Philippines,Establishment,package,17060,1.6,2,3984.831539,Fully protected
+MSZ11,Pilar MPA,Philippines,Establishment,package,7763.9,1.8,1,3984.831539,Fully protected
+MSZ11,Saba MP,Netherland Antilles,Establishment,package,108996.1,8.7,6,,Partially protected
+MSZ11,Bonaire NMP,Netherland Antilles,Establishment,package,72169.5,27,9,,Partially protected
+MSZ11,Seaflower MPA,Colombia,Establishment,package,387.2,65018,9.5,7913.988015,Partially protected
+MSZ11,Mariana Trench MNM,USA,Establishment,package,69,246608,6,85809.90038,Partially protected
+MSZ11,PMNM,USA,Establishment,package,163.5,362100,9,85809.90038,Fully protected
+RNC15,Taputeranga marine reserve,New Zealand,Establishment,package,70327.5,8.54,17,48747.01369,Fully protected
+GF13,Marine Life Protection Act (MLPA) in California,USA,Establishment,package,24699.7,2197,7,85809.90038,Partially protected
+SK23,Ujung Kulon National Park,Indonesia,Establishment,package,40219,44.337,12,4925.430488,Partially protected
+XS17,Nha Trang Bay Marine Protected Area,Vietnam,Establishment,package,13613.8,250,5,4717.290287,Partially protected
+PB18,"Emua, Worasifiu, Laonamoa, Piliura, Unakap",Vanuatu ,Establishment,pa,92354,0.75,,3542.810716,Partially protected
+PB18,Saint Martin Natural Reserve,Saint Martin,Establishment,pa,3426.142857,28,4,"21,668.40",Fully protected
+H13,Coral Sea Marine Park,Australia,Establishment,package,28.21447475,990000,3,"64,407.48",Partially protected
+E14,South Coast Marine Conservation Area,St Vincent & the Granadines,Establishment,package,2491632.516,3.2698,2,"11,501.20",Partially protected
+GL14,Mnemba-Chwaka Bay Marine Conservation Area (MIMCA),Tanzania ,Implementation,package,259306.9671,337.3,5,1185.745483,Partially protected
+KVB10,Hon Mun MPA,Vietnam,Establishment,package,2259.775,160,4,4717.290287,Partially protected
+WV00,Apo Island Marine Sanctuary,Philippines,Establishment,package,228626,1,1,3984.831539,Partially protected
+,,,,,,,,,
