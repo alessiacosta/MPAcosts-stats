@@ -89,6 +89,7 @@ dev.off()
 ```{r}
 # Get world map data
 world <- ne_countries(scale = "medium", returnclass = "sf")
+View(world)
 
 png("Philippines.png", width = 2500, height = 2000, res = 150)
 # Create the world map
@@ -185,6 +186,17 @@ ggplot() +
 
 #checking distribution of mpa size
 hist(log(esubs$Size), nclass=75)
+
+#test for correlation 
+hist(esubs$Cost_km, nclass=75)
+hist(log(esubs$Cost_km), nclass=75)
+plot(esubs$lCost_km~esubs$GDP_pc)
+esubs <- esubs |>  na.omit() # removing NAs from the data
+cor(esubs$lSize, esubs$GDP_pc)
+cor(esubs$Years, esubs$GDP_pc, use = "complete.obs")
+cor(esubs$Years, esubs$lSize, use = "complete.obs")
+library(corrplot)
+corrplot(esubs[,c("Years", "lSize", "lCost_km", "GDP_pc")], method="circle")
 ```
 
 #### Fit the model
@@ -293,16 +305,6 @@ plotResiduals(esubs.resids, quantreg = TRUE)
 #no issues here, looks half decent
 #the diagnostics look fine but we know we need to check other things based on the pp check
 
-#test for correlation 
-hist(esubs$Cost_km, nclass=75)
-hist(log(esubs$Cost_km), nclass=75)
-plot(esubs$lCost_km~esubs$GDP_pc)
-cor(esubs$lSize, esubs$GDP_pc)
-cor(esubs$Years, esubs$GDP_pc, use = "complete.obs")
-cor(esubs$Years, esubs$lSize, use = "complete.obs")
-library(corrplot)
-corrplot(esubs[,c("Years", "lSize", "lCost_km", "GDP_pc")], method="circle")
-
 ```
 
 #### Results
@@ -333,6 +335,7 @@ esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 #### Plot results - predictions
 
 ##### Plotting results for MPA size
+
 ```{r}
 #removing NAs --> there is an NA row in line 24 for some unknown reason
 esubs <- esubs |> 
@@ -412,6 +415,7 @@ dev.off()
 ```
 
 ##### Generating prediction data dateaset
+
 ```{r}
 # Generate prediction data
 #remove nas from the data
@@ -464,7 +468,8 @@ pred_size1 <- pred_draws1 |>
 #View(pred_size1)
 ```
 
-##### Plotting prediction for years 
+##### Plotting prediction for years
+
 ```{r}
 #plot prediction
 # log transformed axis
