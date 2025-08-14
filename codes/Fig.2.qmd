@@ -80,91 +80,120 @@ png("Fig2.png", width = 2500, height = 2000, res = 150)
 fig.2
 dev.off()
 ```
-# Pie charts
+
+# Map with size frequency for fully protected areas
+
 ```{r}
-# Reshape data into long format for pie chart
-frequency_long <- frequency %>%
-  pivot_longer(cols = c(fully_protected, multiuse),
-               names_to = "Category",
-               values_to = "Count") %>%
-  mutate(Percentage = Count / Tally)
-
-
-
-# Ensure Category levels are correct
-frequency_long$Category <- factor(frequency_long$Category, levels = c("fully_protected", "multi_use"))
-
-# Step 1: Plot the world map using geom_sf()
-world_map <- ggplot() +  
-  geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  
-  geom_sf(data = coastline_data, color = "black", fill = NA) +  
-  coord_sf() +  # Use coord_sf for geographic projection
-  theme_minimal() +  
-  theme(
-    axis.text = element_text(size = 24),  
-    axis.title = element_blank(),
-    axis.line.x = element_line(color = "black", size = 0.5),
-    axis.line.y = element_line(color = "black", size = 0.5),
-    axis.ticks = element_line(color = "black", size = 0.5),
-    panel.grid = element_blank(),
-    legend.title = element_text(size = 18)
-  )
-
-# Step 2: Create a function to generate pie charts using geom_bar and coord_polar
-create_pie_chart <- function(data) {
-  ggplot(data, aes(x = factor(1), y = Percentage, fill = Category)) + 
-    geom_bar(stat = "identity", position = "stack", width = 1) +  
-    coord_polar(theta = "y") +  # Convert to pie chart
-    scale_fill_manual(values = c("fully_protected" = "green", "multi_use" = "orange")) +  # Custom colors
-    theme_void()  # Remove axes and background
-}
-
-# Step 3: Manually add pie charts for each (Lon, Lat) and position them
-for(i in 1:nrow(frequency_long)) {
-  pie_data <- frequency_long[i, ]
-  pie_chart <- create_pie_chart(pie_data)
-  
-  # Convert Lon, Lat to plot coordinates using the map's projection
-  xy_coords <- st_transform(st_sfc(st_point(c(pie_data$Lon, pie_data$Lat)), crs = 4326), crs = st_crs(world)) %>%
-    st_coordinates()
-  
-  # Add pie chart as annotation to the world map
-  world_map <- world_map + 
-    annotation_custom(
-      grob = ggplotGrob(pie_chart), 
-      xmin = xy_coords[1], xmax = xy_coords[1], ymin = xy_coords[2], ymax = xy_coords[2]
-    )
-}
-
-# Show the combined plot
-print(world_map)
-```
-# Doughnut chart
-```{r}
-# Doughnut chart example (by adding a blank circle in the center)
-ggplot() +  
-  # Plot countries with a very light grey fill and country boundaries in black
+# filter the data for fully protected areas
+fig1$Protection_level <- as.character(fig1$Protection_level)
+fig1_fully <- fig1 |> 
+  filter(Protection_level == "Fully protected area")
+View(fig1_fully)
+# Create the plot
+full <- ggplot() +  
+  # Plot countries in a very light grey
   geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  
   # Overlay the coastline in black
   geom_sf(data = coastline_data, color = "black", fill = NA) +  
-  # Create pie/doughnut charts for each point
-  geom_bar(data = frequency_long, aes(x = factor(1), y = Percentage, fill = Category), 
-           stat = "identity", position = "stack", width = 1) +
-  coord_polar(theta = "y") +  # Convert the bar chart into a pie chart
-  facet_wrap(~ Lon + Lat) +  # Make each pie chart appear at the right position
+  # Plot your data points with custom size breaks
+  geom_point(data = fig1_fully, aes(x = Longitude, y = Latitude, size = Size),  
+             color = "#0F4D92", alpha = 0.7) +  
+  # Set coordinate system
+  coord_sf() +  
+  # Adjust theme
   theme_minimal() +  
   theme(  
     axis.text = element_text(size = 24),  
-    axis.title = element_blank(),  
+    axis.title = element_blank(),  # Removes axis titles  
     axis.line.x = element_line(color = "black", size = 0.5),  
     axis.line.y = element_line(color = "black", size = 0.5),  
     axis.ticks = element_line(color = "black", size = 0.5),  
-    panel.grid = element_blank(),  
-    legend.title = element_text(size = 18)  
+    panel.grid = element_blank(), 
+    legend.title = element_text(size = 18)
   ) +  
-  scale_fill_manual(values = c("fully_protected" = "green", "multi_use" = "orange")) +  
-  # Add a white circle for the doughnut effect (adjust `xlim`)
-  xlim(c(0, 2)) +  
-  labs(fill = "Protection Type")
+  # Adjust size scale with custom breaks
+  scale_size_continuous(
+    range = c(5, 25),  # Set the range of dot sizes
+  ) +
+  # Rename the legend title
+  labs(size = "MPA size")  # Rename the legend title to "MPA size"
+
+png("Fully protected.png", width = 2500, height = 2000, res = 150)
+full
+dev.off()
 ```
+
+# Map with size frequency for multi-use areas
+```{r}
+# filter the data for fully protected areas
+fig1_multi <- fig1 |> 
+  filter(Protection_level == "Multi-use area")
+View(fig1_multi)
+# Create the plot
+multi <- ggplot() +  
+  # Plot countries in a very light grey
+  geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  
+  # Overlay the coastline in black
+  geom_sf(data = coastline_data, color = "black", fill = NA) +  
+  # Plot your data points with custom size breaks
+  geom_point(data = fig1_multi, aes(x = Longitude, y = Latitude, size = Size),  
+             color = "#0F4D92", alpha = 0.7) +  
+  # Set coordinate system
+  coord_sf() +  
+  # Adjust theme
+  theme_minimal() +  
+  theme(  
+    axis.text = element_text(size = 24),  
+    axis.title = element_blank(),  # Removes axis titles  
+    axis.line.x = element_line(color = "black", size = 0.5),  
+    axis.line.y = element_line(color = "black", size = 0.5),  
+    axis.ticks = element_line(color = "black", size = 0.5),  
+    panel.grid = element_blank(), 
+    legend.title = element_text(size = 18)
+  ) +  
+  # Adjust size scale with custom breaks
+  scale_size_continuous(
+    range = c(5, 25),  # Set the range of dot sizes
+  ) +
+  # Rename the legend title
+  labs(size = "MPA size")  # Rename the legend title to "MPA size"
+
+png("Multi-use.png", width = 2500, height = 2000, res = 150)
+multi
+dev.off()
+```
+
+# Map with both fully protected and multi-use areas
+```{r}
+combined <- ggplot() +  
+  # Plot countries in a very light grey
+  geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  
+  # Overlay the coastline in black
+  geom_sf(data = coastline_data, color = "black", fill = NA) +  
+  # Plot your data points with custom size breaks
+  geom_point(data = fig1, aes(x = Longitude, y = Latitude, size = Size),  
+             color = "#0F4D92", alpha = 0.7) +  
+  # Set coordinate system
+  coord_sf() +  
+  # Adjust theme
+  theme_minimal() +  
+  theme(  
+    axis.text = element_text(size = 24),  
+    axis.title = element_blank(),  # Removes axis titles  
+    axis.line.x = element_line(color = "black", size = 0.5),  
+    axis.line.y = element_line(color = "black", size = 0.5),  
+    axis.ticks = element_line(color = "black", size = 0.5),  
+    panel.grid = element_blank(), 
+    legend.title = element_text(size = 18)
+  ) +  
+  # Adjust size scale with custom breaks
+  scale_size_continuous(
+    range = c(5, 25),  # Set the range of dot sizes
+  ) +
+  # Rename the legend title
+  labs(size = "MPA size")  # Rename the legend title to "MPA size"
+
+png("Combined.png", width = 2500, height = 2000, res = 150)
+combined
+dev.off()
 
