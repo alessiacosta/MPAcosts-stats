@@ -1,0 +1,123 @@
+---
+title: "Figures"
+format: html
+---
+
+# Library
+```{r}
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+```
+
+
+# Figure 3: Costs of establishment phase for each degree of protection 
+```{r}
+# making prediction 
+esubs <- esubs |> 
+  filter(!is.na(Years)) 
+
+pred_draws1 <- emmeans(
+  esubs.brm2,
+  ~ Years | Protection_level,
+  at = list(
+    Years = seq(min(esubs$Years), max(esubs$Years), length.out = 100),
+    lSize = mean(esubs$lSize, na.rm = TRUE),
+    Protection_level = unique(esubs$Protection_level))) |>
+  gather_emmeans_draws() |>
+  mutate(.value = exp(.value))
+
+pred_year1 <- pred_draws1 |>
+  group_split(Years) |>
+  map_dfr(function(df) {
+    hdi_vals <- hdi(df$.value)
+    tibble(
+      Years    = unique(df$Years),
+      Protection_level = unique(df$Protection_level),
+      median    = median(df$.value),
+      lower.HPD = hdi_vals[1],
+      upper.HPD = hdi_vals[2]
+    )
+  })
+#View(pred_year1)
+
+# plotting 
+fpey <- subset(pred_year1, Protection_level == "Fully protected")
+mubsey <- subset(pred_year1, Protection_level == "Partially protected")
+# Create the plot
+neyear_pl <- 
+  ggplot() +
+  # Fully protected areas
+  geom_line(data = fpey, aes(x = Years, y = median, color = "Fully protected areas"), size = 0.8) +
+  geom_ribbon(data = fpey, aes(x = Years, ymin = lower.HPD, ymax = upper.HPD, fill = "Fully protected areas"), alpha = 0.2) +
+  # Partially protected areas
+  geom_line(data = mubsey, aes(x = Years, y = median, color = "Multi-use areas"), size = 0.8) +
+  geom_ribbon(data = mubsey, aes(x = Years, ymin = lower.HPD, ymax = upper.HPD, fill = "Multi-use areas"), alpha = 0.2) +
+  # Customize scales
+  scale_color_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
+  scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
+  # Scientific notation for y-axis
+  scale_y_continuous(labels = scales::label_scientific(), limits=c(0, 2.e06)) +
+  # Apply theme
+  theme_bw() +
+  theme(text = element_text(family = "serif"), 
+        #panel.grid.major = element_blank(),
+        #panel.grid.minor = element_blank(), 
+        legend.position = "right", 
+        axis.title = element_blank(), # remove axis titles
+        panel.border = element_rect(colour = "black", fill = NA, size = 0.25) # change thickness of the outside boarder
+        ) +
+  # Labels
+  labs(
+    #x = "Establishment phase (years)",
+    #y = "Estimated establishment costs ($/km²)",
+    color = "Degree of Protection",
+    fill = "Degree of Protection") +
+  coord_cartesian(clip="off") + 
+   annotate("text", x=-Inf, y=Inf, label="B", hjust=4, vjust=0.3, size=5, fontface="bold", family='serif')
+
+leyear_pl = 
+  ggplot() +
+  geom_line(data = fpey, aes(x = Years, y = median), color = "#0072B2", size = 0.8) +
+  geom_line(data = mubsey, aes(x = Years, y = median), color = "#E69F00", size = 0.8) +
+  geom_ribbon(data = fpey, aes(x = Years, ymin = lower.HPD, ymax = upper.HPD),
+              fill = "#0072B2", alpha = 0.2, color = NA) +
+  geom_ribbon(data = mubsey, aes(x = Years, ymin = lower.HPD, ymax = upper.HPD),
+              fill = "#E69F00", alpha = 0.2, color = NA) +
+  geom_point(data = esubs, aes(x = Years, y = Cost_km, color = Protection_level),
+             show.legend = FALSE) +
+  scale_color_manual(
+    values = c("Fully protected" = "#0072B2", "Partially protected" = "#E69F00"),
+    labels = c("Fully protected" = "Fully protected areas",
+               "Partially protected" = "Multi-use areas")
+  ) +
+  scale_y_log10(labels = scales::label_scientific(), limits = c(1e0, 1.0e+07)) +
+  theme_bw() +
+  theme(text = element_text(family = "serif", size=6),
+         axis.title = element_blank(),
+         # These lines remove the grid
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()) 
+  #labs(
+   # x = "lnSize (km²)",
+    #y = "Estimated maintenance costs (cost/km² p.a.)",
+    #color = "Protection status")
+  
+tot_years <- neyear_pl +
+  inset_element(
+    leyear_pl,
+     left = 0.02, 
+    bottom = 0.6,
+    right = 0.8,
+    top = 0.98)
+
+png("Figure.3.png", width = 2000, height = 1000, res = 300)
+final_plot + tot_years + plot_annotation(
+    theme = theme(
+      plot.caption = element_text(hjust = 0.41, size = 10, family = "serif")
+    ),
+    caption = "Establishment phase (years)")
+dev.off()
+```
+
+

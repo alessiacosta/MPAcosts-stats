@@ -15,6 +15,7 @@ library(sf)
 library(ggspatial) # to add spatial elements to a ggplot map
 library(tidycountries) # to get country coordinates
 library(tidyr)
+library(patchwork)
 ```
 
 # Importing data
@@ -22,6 +23,7 @@ library(tidyr)
 ```{r}
 #upload the right data
 fig1 <- read_csv("../Data/fig.1.csv")
+View(fig1)
 # Get world map data
 world <- ne_countries(scale = "medium", returnclass = "sf")
 # Load the coastline data from rnaturalearth
@@ -124,11 +126,12 @@ dev.off()
 ```
 
 # Map with size frequency for multi-use areas
+
 ```{r}
 # filter the data for fully protected areas
 fig1_multi <- fig1 |> 
   filter(Protection_level == "Multi-use area")
-View(fig1_multi)
+#View(fig1_multi)
 # Create the plot
 multi <- ggplot() +  
   # Plot countries in a very light grey
@@ -137,7 +140,7 @@ multi <- ggplot() +
   geom_sf(data = coastline_data, color = "black", fill = NA) +  
   # Plot your data points with custom size breaks
   geom_point(data = fig1_multi, aes(x = Longitude, y = Latitude, size = Size),  
-             color = "#0F4D92", alpha = 0.7) +  
+             color = "#E69F00", alpha = 0.7) +  
   # Set coordinate system
   coord_sf() +  
   # Adjust theme
@@ -163,16 +166,23 @@ multi
 dev.off()
 ```
 
+
 # Map with both fully protected and multi-use areas
 ```{r}
-combined <- ggplot() +  
+# Combine with patchwork
+combined <- full/multi
+png("Combined.png", width = 2500, height = 2000, res = 150)
+combined
+dev.off()
+
+# COmbined in one plot 
+#combined2 <- 
+  ggplot() +
   # Plot countries in a very light grey
   geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  
   # Overlay the coastline in black
   geom_sf(data = coastline_data, color = "black", fill = NA) +  
-  # Plot your data points with custom size breaks
-  geom_point(data = fig1, aes(x = Longitude, y = Latitude, size = Size),  
-             color = "#0F4D92", alpha = 0.7) +  
+  geom_point(data =fig1, aes(x =Longitude, y=Latitude, size = Size, color=Protection_level),  alpha = 0.7) +
   # Set coordinate system
   coord_sf() +  
   # Adjust theme
@@ -185,15 +195,17 @@ combined <- ggplot() +
     axis.ticks = element_line(color = "black", size = 0.5),  
     panel.grid = element_blank(), 
     legend.title = element_text(size = 18)
-  ) +  
-  # Adjust size scale with custom breaks
-  scale_size_continuous(
-    range = c(5, 25),  # Set the range of dot sizes
   ) +
+  scale_size_continuous(
+    range = c(5, 25)) +
   # Rename the legend title
-  labs(size = "MPA size")  # Rename the legend title to "MPA size"
+  labs(size = "MPA Size (km²)", color = "Degree of Protection") + # Rename the legend title to "MPA size"
+  scale_color_manual(
+    values = c(
+      "Fully protected area" = "#0072B2", 
+      "Multi-use area" = "#E69F00"))
+png("Combined2.png", width = 2500, height = 2000, res = 150)
+combined2
+dev.off()  
 
-png("Combined.png", width = 2500, height = 2000, res = 150)
-combined
-dev.off()
-
+```

@@ -414,7 +414,7 @@ nesize +
 dev.off()
 ```
 
-##### Generating prediction data dateaset
+##### Plotting results for MPA years - do not distinguish for protection level
 
 ```{r}
 # Generate prediction data
@@ -466,11 +466,7 @@ pred_size1 <- pred_draws1 |>
     )
   })
 #View(pred_size1)
-```
 
-##### Plotting prediction for years
-
-```{r}
 #plot prediction
 # log transformed axis
  lyears = 
@@ -478,10 +474,9 @@ pred_size1 <- pred_draws1 |>
   geom_line(size = 0.8) +  # thinner line
   geom_point(data =esubs, aes(x=Years, y=Cost_km)) +
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-     scale_y_continuous(labels = label_scientific()) +  # Scientific notation on y-axis
   theme_bw() +
-     scale_y_log10() + # Logarithmic scale for y-axis
-   theme(text = element_text(family = "serif", size=7),
+     scale_y_log10(labels = scales::label_scientific(), limits = c(1e0, 1.0e+07)) + # Logarithmic scale for y-axis  & scientific notation on y-axis
+   theme(text = element_text(family = "serif", size=6),
          axis.title = element_blank(),
          # These lines remove the grid
     panel.grid.major = element_blank(),
@@ -491,23 +486,27 @@ pred_size1 <- pred_draws1 |>
       ggplot(pred_size1, aes(x = Years, y = median)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-     scale_y_continuous(labels = label_scientific()) +  # Scientific notation on y-axis
+     scale_y_continuous(labels = scales::label_scientific(), limits=c(0, 2.e06)) +  # Scientific notation on y-axis
   theme_bw() +
-   theme(text = element_text(family = "serif")) +
+   theme(text = element_text(family = "serif"), 
+         axis.title.x = element_blank(), 
+         panel.border = element_rect(colour = "black", fill = NA, size = 0.25)) +
+    coord_cartesian(clip="off") + 
+   annotate("text", x=-Inf, y=Inf, label="A", hjust=4, vjust=0.3, size=5, fontface="bold", family='serif') +
   labs(
-    x = "Establishment phase (years)",
+    #x = "Establishment phase (years)",
     y = "Estimated establishment cost ($/km²)")
 
  #Combine and export the inset
 png("years.png", width = 1300, height = 1400, res = 300) 
-#final_plot <- 
+final_plot <- 
   nyears +
   inset_element(
     lyears,
     left = 0.02, 
-    bottom = 0.55,
-    right = 0.65,
-    top = 0.95)
+    bottom = 0.6,
+    right = 0.8,
+    top = 0.98)
 dev.off()
 
 ```
@@ -995,7 +994,7 @@ dev.off()
 ### GDP plot
 
 ```{r}
-#backtrnasformed the response variable to identity (or absolute values) as well as intervals 
+#transformed the response variable to identity (or absolute values) as well as intervals 
 #filter the nas
 msubs <- msubs |> 
   filter(!is.na(GDP_pc))
