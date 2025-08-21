@@ -14,7 +14,7 @@ library(scales) # helps with the scientific notation
 library(writexl) # helps with parallel processing
 ```
 
-# Loading the dataset
+## Loading the dataset
 
 ```{r}
 # Importing the data

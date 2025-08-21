@@ -354,6 +354,7 @@ pred_draws <- emmeans(
 ) |>
   gather_emmeans_draws() |>
   mutate(.value = exp(.value))  # back-transform from log
+#View(pred_draws)
 
 # Now safely summarise per lSize using purrr
 pred_size <- pred_draws |>
@@ -362,11 +363,14 @@ pred_size <- pred_draws |>
     hdi_vals <- hdi(df$.value)
     tibble(
       lSize     = unique(df$lSize),
-      median    = median(df$.value),
+      Size      = exp(unique(df$lSize)),  # add a new variable --> back-transform size predictor
+      response  = median(df$.value),
       lower.HPD = hdi_vals[1],
       upper.HPD = hdi_vals[2]
     )
   })
+# export the dataset 
+write_csv(pred_size, "../Data/pred_size.csv")
 
 #View(pred_size)
 #producing a predicted ggplot
@@ -465,7 +469,7 @@ pred_size1 <- pred_draws1 |>
       upper.HPD = hdi_vals[2]
     )
   })
-#View(pred_size1)
+View(pred_size1)
 
 #plot prediction
 # log transformed axis
@@ -768,7 +772,7 @@ dev.off()
 
 ### Combining plots
 
-#### Combinign size plots
+#### Combining size plots
 
 ```{r}
 png("size.png", width = 2000, height = 1000, res = 300)
@@ -981,7 +985,7 @@ tot_m <- nmsize_pl +
 
 ```
 
-#### Combinign size plots
+#### Combining size plots
 
 ```{r}
 # Remove legends from individual plots
