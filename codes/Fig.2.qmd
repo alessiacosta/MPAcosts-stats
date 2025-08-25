@@ -176,7 +176,7 @@ combined
 dev.off()
 
 # COmbined in one plot 
-#combined2 <- 
+combined2 <- 
   ggplot() +
   # Plot countries in a very light grey
   geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  

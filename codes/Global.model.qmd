@@ -14,7 +14,7 @@ library(scales) # helps with the scientific notation
 library(writexl) # helps with parallel processing
 ```
 
-## Loading the dataset
+# Loading the dataset
 
 ```{r}
 # Importing the data
@@ -27,7 +27,7 @@ mpa_sizes <- MPA.Atlas |>
   select(designated_date, wdpa_pid, zone_area_calc) |>  
   filter(!is.na(zone_area_calc), zone_area_calc > 0) |>
   pull(zone_area_calc)
-#View(mpa_sizes)
+head(mpa_sizes)
 # Ocean stats
 global_ocean_area <- 361e6 # Define total global ocean area (in km²)
 initial_percent_protected <- 8.3 # Define the current protection level (as a percentage)
@@ -36,7 +36,7 @@ target_area_km2 <- global_ocean_area * 0.30# Calculate the target total protecte
 remaining_area_km2 <- target_area_km2 - initial_area_km2# Calculate how much additional area we need to protect
 ```
 
-## Scenario 1: Total establishment costs of 30% coverage - using years vector based on the data I have collected
+# Scenario 1: Total establishment costs of 30% coverage - using years vector based on the data I have collected
 
 ```{r}
 establishment_years <- c(1, 2, 6, 9)# Define the establishment period (in years)
@@ -59,6 +59,7 @@ get_predicted_cost <- function(size_km2) {
 
 # Run simulations for all establishment years
 all_results <- list()
+View(mpa_sizes)
 
 for (year in establishment_years) { #for loop to make simulations for each establishment year
   set.seed(123)  # for reproducibility
@@ -120,7 +121,7 @@ ggplot(combined_results, aes(x = cumulative_percent, y = cumulative_cost / 1e9, 
 
 ```
 
-## Scenario 1: Total establishment costs of 30% coverage - using years vector based on the data I calculated from the MPAtlas downloaded data
+# Scenario 1: Total establishment costs of 30% coverage - using years vector based on the data I calculated from the MPAtlas downloaded data
 
 ```{r}
 #cleaning data first - extracting three columns from the MPA dataset: proposed date, designated date and wdpa_id
@@ -140,7 +141,7 @@ Tot_est_years <- mpa_years |> # Create a new column for the establishment period
 # Double checking the data here
 View(Tot_est_years)
 #basic summary for establsihment years to decide which years to select 
-summary(Tot_est_years) #picked 1 (min),3 (1st qu),4 (median),6 (mean) and,7 (3rd qu)
+summary(Tot_est_years) #picked 1 (min), 3 (1st qu), 4 (median), 6 (mean), and 7 (3rd qu)
 
 #Making a vector for the 
 establishment_years <- c(1, 3, 4, 6, 7)# Define the establishment period (in years)
@@ -228,7 +229,7 @@ dev.off()
 
 ```
 
-## Scenario 2: How long is it going to take to reach 30% coverage
+# Scenario 2: How long is it going to take to reach 30% coverage
 
 ```{r}
 establishment_years <- 4 # Define the establishment period (in years) - using 4 because it is the median from the data I have
@@ -437,7 +438,7 @@ dev.off()
 
 ```
 
-## Scenario 4: Reach 30% coverage by 2030
+# Scenario 4: Reach 30% coverage by 2030
 
 ```{r}
 # Define the target year
