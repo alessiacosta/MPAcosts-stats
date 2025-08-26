@@ -142,7 +142,13 @@ View(esubs)
     #     ID=factor(ID)) # this will order them rather than going into alphabetical order 
 #View(esubs)
 #summary(esubs)
-
+# brief summary of the 
+fully_protected <- esubs |> 
+  filter(Protection_level == "Fully protected")
+summary(fully_protected)
+multi_use <- esubs |> 
+  filter(Protection_level == "Partially protected")
+summary(multi_use)
 ```
 
 #### Exploratory data analysis
@@ -718,13 +724,14 @@ pred_size2 <- pred_draws_m |>
     hdi_vals <- hdi(df$.value)
     tibble(
       lSize     = unique(df$lSize),
+      Size       = exp(unique(df$lSize)),  # add a new variable --> back-transform size predictor
       median    = median(df$.value),
       lower.HPD = hdi_vals[1],
       upper.HPD = hdi_vals[2]
     )
   })
-
-#View(pred_size2)
+# export the dataset 
+write_csv(pred_size2, "../Data/pred_size_m.csv")
 #prediction plot
 nmsize = 
   ggplot(pred_size2, aes(x = lSize, y = median)) +
@@ -784,13 +791,13 @@ dev.off()
 #### Size per each protection level - establishment
 
 ```{r}
-#prediction of the maintenance costs/km2 per year
+#prediction of the establishment costs/km2 per year
 pred_draws_e <- emmeans(
   esubs.brm2,
   ~ lSize | Protection_level,
   at = list(
     lSize = seq(min(esubs$lSize), max(esubs$lSize), length.out = 100),
-    GDP_pc = mean(esubs$GDP_pc, na.rm = TRUE), 
+    Years = mean(esubs$Years, na.rm = TRUE),
     Protection_level = unique(esubs$Protection_level))) |>
   gather_emmeans_draws() |>
   mutate(.value = exp(.value))  # back-transform from log
@@ -802,19 +809,16 @@ pred_size_e <- pred_draws_e |>
     hdi_vals <- hdi(df$.value)
     tibble(
       lSize     = unique(df$lSize),
+      Size      = exp(unique(df$lSize)),  # add a new variable --> back-transform size predictor
       Protection_level = unique(df$Protection_level),
       median    = median(df$.value),
       lower.HPD = hdi_vals[1],
       upper.HPD = hdi_vals[2]
     )
   })
-#pred_size2 <- pred_size2 %>%
- # mutate(Protection_level = fct_recode(Protection_level,
-  #  "Multi-use areas" = "Partially protected",
-   # "Fully Protected Areas" = "Fully protected"
-  #))
-#View(msubs)
 
+# export the dataset 
+write_csv(pred_size_e, "../Data/pred_size_e.csv")
 
 fpe <- subset(pred_size_e, Protection_level == "Fully protected")
 mubse <- subset(pred_size_e, Protection_level == "Partially protected")
@@ -1072,3 +1076,17 @@ png("maintenance GDP.png", width = 1500, height = 1200, res = 300)
     top = 0.95)
 dev.off()
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

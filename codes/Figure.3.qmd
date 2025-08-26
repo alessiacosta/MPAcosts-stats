@@ -4,14 +4,15 @@ format: html
 ---
 
 # Library
+
 ```{r}
 library(ggplot2)
 library(dplyr)
 library(patchwork)
 ```
 
+# Figure 3: Costs of establishment phase for each degree of protection
 
-# Figure 3: Costs of establishment phase for each degree of protection 
 ```{r}
 # making prediction 
 esubs <- esubs |> 
@@ -119,5 +120,3 @@ final_plot + tot_years + plot_annotation(
     caption = "Establishment phase (years)")
 dev.off()
 ```
-
-
