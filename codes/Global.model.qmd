@@ -349,7 +349,7 @@ ggplot(mpa_records, aes(x = year, y =cumulative_percent)) +
 dev.off()
 ```
 
-Scenario 3: Maintenance costs for current size distribution of MPAs
+# Scenario 3: Maintenance costs for current size distribution of MPAs
 
 ```{r}
 #Calculate the initial management costs at 8.3% coverage based on the estimates from Brander et al., 2020 - based on 10% cover NPV 
@@ -363,7 +363,7 @@ Scenario 3: Maintenance costs for current size distribution of MPAs
 # Step 1: Prepare the predicted cost lookup table from the model
 # Assumes `pred_size` contains: Size, Protection_level (if any), and response (predicted cost per km² per year)
 pred_size_lookup2 <- pred_size2 |>
-  rename(cost_per_km2_per_year = response) |>  # Make column name explicit for clarity
+  rename(cost_per_km2_per_year = median) |>  # Make column name explicit for clarity
   arrange(Size)  # Ensure sorted for interpolation
 
 # Step 2: Define an interpolation function for predicted annual cost per km²
