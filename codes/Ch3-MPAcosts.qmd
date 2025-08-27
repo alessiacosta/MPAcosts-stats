@@ -724,13 +724,13 @@ pred_size2 <- pred_draws_m |>
     hdi_vals <- hdi(df$.value)
     tibble(
       lSize     = unique(df$lSize),
-      Size       = exp(unique(df$lSize)),  # add a new variable --> back-transform size predictor
+      Size      = exp(unique(df$lSize)),  # add a new variable --> back-transform size predictor
       median    = median(df$.value),
       lower.HPD = hdi_vals[1],
       upper.HPD = hdi_vals[2]
     )
   })
-# export the dataset 
+# export the dataset
 write_csv(pred_size2, "../Data/pred_size_m.csv")
 #prediction plot
 nmsize = 
@@ -909,6 +909,7 @@ pred_size2 <- pred_draws_m |>
     hdi_vals <- hdi(df$.value)
     tibble(
       lSize     = unique(df$lSize),
+      Size       = exp(unique(df$lSize)),  # add a new variable --> back-transform size predictor
       Protection_level = unique(df$Protection_level),
       median    = median(df$.value),
       lower.HPD = hdi_vals[1],
@@ -921,7 +922,7 @@ pred_size2 <- pred_draws_m |>
    # "Fully Protected Areas" = "Fully protected"
   #))
 #View(msubs)
-
+write_csv(pred_size2, "../Data/pred_size_m_protection.csv")
 
 fp <- subset(pred_size2, Protection_level == "Fully protected")
 mubs <- subset(pred_size2, Protection_level == "Partially protected")
