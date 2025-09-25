@@ -112,7 +112,7 @@ tot_years <- neyear_pl +
     right = 0.8,
     top = 0.98)
 
-png("Figure.3.png", width = 2000, height = 1000, res = 300)
+png("../Results/Figure.3.png", width = 2000, height = 1000, res = 300)
 final_plot + tot_years + plot_annotation(
     theme = theme(
       plot.caption = element_text(hjust = 0.41, size = 10, family = "serif")

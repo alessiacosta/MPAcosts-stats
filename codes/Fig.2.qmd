@@ -131,7 +131,7 @@ dev.off()
 # filter the data for fully protected areas
 fig1_multi <- fig1 |> 
   filter(Protection_level == "Multi-use area")
-#View(fig1_multi)
+View(fig1_multi)
 # Create the plot
 multi <- ggplot() +  
   # Plot countries in a very light grey
@@ -166,8 +166,8 @@ multi
 dev.off()
 ```
 
-
 # Map with both fully protected and multi-use areas
+
 ```{r}
 # Combine with patchwork
 combined <- full/multi

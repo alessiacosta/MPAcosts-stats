@@ -57,7 +57,7 @@ fig1 <- read_csv("../Data/fig.1.csv")
 # Get world map data
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
-png("Map1.png", width = 2500, height = 2000, res = 150)
+png("../Results/Map1.png", width = 2500, height = 2000, res = 150)
 # Create the world map
 # Load the coastline data from rnaturalearth
 coastline_data <- ne_coastline(scale = "medium", returnclass = "sf")
@@ -80,45 +80,9 @@ ggplot() +
     axis.line.x = element_line(color = "black", size = 0.5),
     axis.line.y = element_line(color = "black", size = 0.5),
     axis.ticks = element_line(color = "black", size = 0.5),
-    panel.grid = element_blank()
-  )
-dev.off()
-
-```
-
-```{r}
-# Get world map data
-world <- ne_countries(scale = "medium", returnclass = "sf")
-View(world)
-
-png("Philippines.png", width = 2500, height = 2000, res = 150)
-# Create the world map
-# Load the coastline data from rnaturalearth
-coastline_data <- ne_coastline(scale = "medium", returnclass = "sf")
-
-# Create the plot
-ggplot() +  
-  # Plot countries in a very light grey
-  geom_sf(data = world, fill = "grey95", color = NA) +  
-  # Overlay the coastline in black
-  geom_sf(data = coastline_data, color = "black", fill = NA) +  
-  # Plot your data points
-  geom_point(data = fig1, aes(x = Longitude, y = Latitude), color = "goldenrod1", size = 8) +  # color #008080
-  # Set coordinate system
-  coord_sf() +
-  #set the corrdinate to cover philippines only
-  xlim(117, 130) +
-  ylim(4, 22) +
-  # Adjust theme
-  theme_minimal() +  
-  theme(
-    axis.text = element_text(size = 24),
-    axis.title = element_blank(),  # Removes axis titles
-    axis.line.x = element_line(color = "black", size = 0.5),
-    axis.line.y = element_line(color = "black", size = 0.5),
-    axis.ticks = element_line(color = "black", size = 0.5),
     panel.grid = element_blank())
 dev.off()
+
 ```
 
 # Statistics
@@ -130,7 +94,6 @@ dev.off()
 ```{r}
 #importing establishment data
 esubs <- read_csv("../Data/esubs.csv")
-View(esubs)
 #removing the last two rows from the dataset cause for some reason it pops up as NAs
 #esubs <- head(esubs, -2)
 #View(esubs)
@@ -196,13 +159,13 @@ hist(log(esubs$Size), nclass=75)
 #test for correlation 
 hist(esubs$Cost_km, nclass=75)
 hist(log(esubs$Cost_km), nclass=75)
-plot(esubs$lCost_km~esubs$GDP_pc)
+#plot(esubs$lCost_km~esubs$GDP_pc)
 esubs <- esubs |>  na.omit() # removing NAs from the data
-cor(esubs$lSize, esubs$GDP_pc)
-cor(esubs$Years, esubs$GDP_pc, use = "complete.obs")
-cor(esubs$Years, esubs$lSize, use = "complete.obs")
-library(corrplot)
-corrplot(esubs[,c("Years", "lSize", "lCost_km", "GDP_pc")], method="circle")
+#cor(esubs$lSize, esubs$GDP_pc)
+#cor(esubs$Years, esubs$GDP_pc, use = "complete.obs")
+#cor(esubs$Years, esubs$lSize, use = "complete.obs")
+#library(corrplot)
+#corrplot(esubs[,c("Years", "lSize", "lCost_km", "GDP_pc")], method="circle")
 ```
 
 #### Fit the model
@@ -410,7 +373,7 @@ nesize =
   )
 
  #Combine and export the inset
-png("establishment size.png", width = 1000, height = 1300, res = 300) 
+png("../Results/establishment_size.png", width = 1000, height = 1300, res = 300) 
 #final_plot <- 
 esize = 
 nesize + 
@@ -508,8 +471,8 @@ View(pred_size1)
     y = "Estimated establishment cost ($/km²)")
 
  #Combine and export the inset
-png("years.png", width = 1300, height = 1400, res = 300) 
-final_plot <- 
+png("../Results/years.png", width = 1300, height = 1400, res = 300) 
+#final_plot <- 
   nyears +
   inset_element(
     lyears,
@@ -536,7 +499,6 @@ msubs <- read_csv("../Data/msubs.csv")
 summary(msubs)
 
 #Adding a new column for protection level and code it as a as binary --> 1 as fully protected and 0 for partially protected
-msubs$Protection_bin<-msubs$Enforcement*NA
 msubs$Protection_bin[msubs$Protection_level=="Fully protected"]<-1
 msubs$Protection_bin[msubs$Protection_level=="Partially protected"]<-0
 
@@ -545,7 +507,6 @@ msubs <- msubs |>
  subset(Cost_class %in% c("Maintenance"))
 summary(msubs) 
 hist(log(msubs$Cost_km), nclass=75)
-View(msubs)
 #table(as.numeric(msubs$Cost_km),msubs$Cost_class)
 
 ```
@@ -762,8 +723,8 @@ nmsize =
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
   
-  png("maitenance size.png", width = 1000, height = 1200, res = 300) 
-#msize = 
+png("../Results/maitenance_size.png", width = 1000, height = 1200, res = 300) 
+msize = 
   nmsize +
   inset_element(
     lmsize,
@@ -782,10 +743,9 @@ dev.off()
 #### Combining size plots
 
 ```{r}
-png("size.png", width = 2000, height = 1000, res = 300)
+png("../Results/size.png", width = 2000, height = 1000, res = 300)
 esize + msize
 dev.off()
-
 ```
 
 #### Size per each protection level - establishment
@@ -994,7 +954,7 @@ tot_m <- nmsize_pl +
 
 ```{r}
 # Remove legends from individual plots
-png("protection level size.png", width = 2500, height = 1300, res = 300)
+png("../Results/protection level size.png", width = 2500, height = 1300, res = 300)
 combined_plot <- tot_e + tot_m
 print(combined_plot)
 dev.off()
@@ -1066,7 +1026,7 @@ leGDP_pc =
   scale_x_continuous(
     labels = label_scientific())
   
-png("maintenance GDP.png", width = 1500, height = 1200, res = 300) 
+png("../Results/maintenance GDP.png", width = 1500, height = 1200, res = 300) 
 #GDP = 
   neGDP_pc +
   inset_element(
