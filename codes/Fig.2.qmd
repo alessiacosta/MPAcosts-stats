@@ -44,168 +44,68 @@ fig1_tally <- fig1 |>
 View(fig1_tally)
 ```
 
-# Creating a world map
-
-```{r}
-# Create the plot
-fig.2 <- ggplot() +  
-  # Plot countries in a very light grey
-  geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  
-  # Overlay the coastline in black
-  geom_sf(data = coastline_data, color = "black", fill = NA) +  
-  # Plot your data points with custom size breaks
-  geom_point(data = frequency, aes(x = Lon, y = Lat, size = Tally),  
-             color = "#0F4D92", alpha = 0.7) +  
-  # Set coordinate system
-  coord_sf() +  
-  # Adjust theme
-  theme_minimal() +  
-  theme(  
-    axis.text = element_text(size = 24),  
-    axis.title = element_blank(),  # Removes axis titles  
-    axis.line.x = element_line(color = "black", size = 0.5),  
-    axis.line.y = element_line(color = "black", size = 0.5),  
-    axis.ticks = element_line(color = "black", size = 0.5),  
-    panel.grid = element_blank(), 
-    legend.title = element_text(size = 18)
-  ) +  
-  # Adjust size scale with custom breaks
-  scale_size_continuous(
-    breaks = c(2, 5, 8, 12),  # Set custom frequency breaks
-    range = c(4, 21)          # Set the range of dot sizes
-  ) +  
-  # Rename the legend title
-  labs(size = "Number of \nMPAs")  # Rename the legend title to "Frequency Tally"
-
-# save figure
-png("Fig2.png", width = 2500, height = 2000, res = 150)
-fig.2
-dev.off()
-```
-
-# Map with size frequency for fully protected areas
-
-```{r}
-# filter the data for fully protected areas
-fig1$Protection_level <- as.character(fig1$Protection_level)
-fig1_fully <- fig1 |> 
-  filter(Protection_level == "Fully protected area")
-View(fig1_fully)
-# Create the plot
-full <- ggplot() +  
-  # Plot countries in a very light grey
-  geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  
-  # Overlay the coastline in black
-  geom_sf(data = coastline_data, color = "black", fill = NA) +  
-  # Plot your data points with custom size breaks
-  geom_point(data = fig1_fully, aes(x = Longitude, y = Latitude, size = Size),  
-             color = "#0F4D92", alpha = 0.7) +  
-  # Set coordinate system
-  coord_sf() +  
-  # Adjust theme
-  theme_minimal() +  
-  theme(  
-    axis.text = element_text(size = 24),  
-    axis.title = element_blank(),  # Removes axis titles  
-    axis.line.x = element_line(color = "black", size = 0.5),  
-    axis.line.y = element_line(color = "black", size = 0.5),  
-    axis.ticks = element_line(color = "black", size = 0.5),  
-    panel.grid = element_blank(), 
-    legend.title = element_text(size = 18)
-  ) +  
-  # Adjust size scale with custom breaks
-  scale_size_continuous(
-    range = c(5, 25),  # Set the range of dot sizes
-  ) +
-  # Rename the legend title
-  labs(size = "MPA size")  # Rename the legend title to "MPA size"
-
-png("Fully protected.png", width = 2500, height = 2000, res = 150)
-full
-dev.off()
-```
-
-# Map with size frequency for multi-use areas
-
-```{r}
-# filter the data for fully protected areas
-fig1_multi <- fig1 |> 
-  filter(Protection_level == "Multi-use area")
-View(fig1_multi)
-# Create the plot
-multi <- ggplot() +  
-  # Plot countries in a very light grey
-  geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  
-  # Overlay the coastline in black
-  geom_sf(data = coastline_data, color = "black", fill = NA) +  
-  # Plot your data points with custom size breaks
-  geom_point(data = fig1_multi, aes(x = Longitude, y = Latitude, size = Size),  
-             color = "#E69F00", alpha = 0.7) +  
-  # Set coordinate system
-  coord_sf() +  
-  # Adjust theme
-  theme_minimal() +  
-  theme(  
-    axis.text = element_text(size = 24),  
-    axis.title = element_blank(),  # Removes axis titles  
-    axis.line.x = element_line(color = "black", size = 0.5),  
-    axis.line.y = element_line(color = "black", size = 0.5),  
-    axis.ticks = element_line(color = "black", size = 0.5),  
-    panel.grid = element_blank(), 
-    legend.title = element_text(size = 18)
-  ) +  
-  # Adjust size scale with custom breaks
-  scale_size_continuous(
-    range = c(5, 25),  # Set the range of dot sizes
-  ) +
-  # Rename the legend title
-  labs(size = "MPA size")  # Rename the legend title to "MPA size"
-
-png("Multi-use.png", width = 2500, height = 2000, res = 150)
-multi
-dev.off()
-```
 
 # Map with both fully protected and multi-use areas
 
 ```{r}
-# Combine with patchwork
-combined <- full/multi
-png("Combined.png", width = 2500, height = 2000, res = 150)
-combined
-dev.off()
-
-# COmbined in one plot 
+# Combined in one plot 
 combined2 <- 
   ggplot() +
   # Plot countries in a very light grey
   geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  
   # Overlay the coastline in black
   geom_sf(data = coastline_data, color = "black", fill = NA) +  
-  geom_point(data =fig1, aes(x =Longitude, y=Latitude, size = Size, color=Protection_level),  alpha = 0.7) +
+  geom_point(data =fig1, aes(x =Longitude, y=Latitude, size = Size, fill = Protection_level, color = Protection_level), 
+             shape = 21, # shape that has the circle and border
+             #color = "black", # color of the border
+             stroke = 0.9, # thickness of the border
+             alpha = 0.7) +
   # Set coordinate system
   coord_sf() +  
   # Adjust theme
   theme_minimal() +  
   theme(  
+    text = element_text(family = "serif"),  # Set font to serif
     axis.text = element_text(size = 24),  
     axis.title = element_blank(),  # Removes axis titles  
     axis.line.x = element_line(color = "black", size = 0.5),  
     axis.line.y = element_line(color = "black", size = 0.5),  
     axis.ticks = element_line(color = "black", size = 0.5),  
     panel.grid = element_blank(), 
-    legend.title = element_text(size = 18)
-  ) +
-  scale_size_continuous(
-    range = c(5, 25)) +
-  # Rename the legend title
-  labs(size = "MPA Size (km²)", color = "Degree of Protection") + # Rename the legend title to "MPA size"
-  scale_color_manual(
+    legend.title = element_text(size = 20), 
+    legend.text = element_text(size = 16)) + # set the size of the text of the legend items
+  scale_size_continuous(range = c(6, 25), 
+                        limits = c(min(fig1$Size), max(fig1$Size)),  # select meaningful sizes for legend
+                        breaks = c(1, 100000, 990000), # set the specific bubble sizes shown in the legend
+                        labels = comma) + # add a comma to mark thousands in the bubles in teh legend
+  labs(size = "MPA Size (km²)", color = "Degree of protection", fill = "Degree of protection") + # Rename the legend title to "MPA size"
+  scale_fill_manual(
     values = c(
       "Fully protected area" = "#0072B2", 
-      "Multi-use area" = "#E69F00"))
-png("Combined2.png", width = 2500, height = 2000, res = 150)
+      "Multi-use area" = "#E69F00")) + 
+  scale_color_manual(    # changing the color of the borders for the two different categories
+    values = c(
+      "Fully protected area" = "#004C7A", 
+      "Multi-use area" = "#B37400")) + 
+  guides(color = guide_legend( override.aes = list(size=8)),  # increase the size of the legend points for protection level 
+         size = guide_legend(override.aes = list(fill = "black")))  # manually changing for MPA size bubbles
+# exporting the plot as a png
+png("../Results/Combined2.png", width = 2500, height = 2300, res = 150)
 combined2
 dev.off()  
-
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

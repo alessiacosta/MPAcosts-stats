@@ -296,6 +296,18 @@ esubs.brm2 |>
 
 #Paritally protected (0.062-1)*100= -93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
+# untransformed results
+esubs.brm2 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median= median, 
+    hdi = ~HDInterval::hdi(.x),
+    rhat, 
+    ess_bulk,
+    Pl=~mean(.x<1), 
+    Pg=~mean(.x>1))
+
 #the amount of variability explained by the model -quasi R sqaured
 esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 #we are explaining 40% of the variance with this model -  which should be a pretty good fit for the model
@@ -658,7 +670,7 @@ msubs.brm2 |>
                   Pg=~mean(.x>0))
 #Partially protected (1-0.062)*100= 93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
-#the amount of variability explained by the model -quasi R sqaured
+#the amount of variability explained by the model -quasi R squared
 msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 #we are explaining 10% of the variance with this model -  which should be a pretty good fit for the model
 ```
