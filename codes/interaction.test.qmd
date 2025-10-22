@@ -1,0 +1,195 @@
+---
+title: "interaction.test"
+format: html
+---
+```{r}
+
+#starting setting up the model
+#model formula
+esubs <- esubs |> 
+  mutate(lSize=log(Size), 
+         lCost_km=log(Cost_km))
+
+#form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
+#correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
+# frequentist test
+m1 = lm(lCost_km ~ scale(lSize) + scale(Years) + Protection_level, data = esubs)
+summary(m1)
+# bayesian model formula
+form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + Protection_level, family=gaussian)
+# mean for each group and mads for each group for our priors
+esubs |> group_by(Protection_level) |>
+  summarise(Median=median(lCost_km), MAD=mad(lCost_km))
+  
+#looking at priors needed
+get_prior(form1, esubs)
+
+#setting my priors
+priors = prior(normal(11, 1.8), class='Intercept') +
+  prior(normal(0,1.8), class='b')
+
+# running the model with priors only
+esubs.brm1 = brm(form1, 
+               data=esubs, 
+               prior=priors,
+               sample_prior='only', 
+               iter= 5000, 
+               warmup = 1000, 
+               chains=3, 
+               cores = 3, 
+               thin=5, 
+               refresh=0, 
+               seed=123, 
+               control = list(adapt_delta=0.99, max_treedepth=29),
+               backend = "cmdstanr")
+
+#making a conditional plot
+esubs.brm1 |>
+  conditional_effects() |> 
+  plot(points=TRUE)
+
+#making a conditional plot on a better scale 
+esubs.brm1 |>
+  conditional_effects() |> 
+  plot(points=TRUE) |> 
+  wrap_plots() &
+  scale_y_log10() # I had to increase the priors because they were not wide enough
+
+# running the model with both priors and data
+esubs.brm2 = esubs.brm1 |> 
+  update(sample_prior = 'yes', refresh=100)
+#Assess priors and posteriors
+esubs.brm2 |> SUYR_prior_and_posterior()
+
+#Produce the same conditional plot but with the posteriors
+esubs.brm2 |>
+  conditional_effects() |> 
+  plot(points=TRUE) |> 
+  wrap_plots() # &
+  #scale_y_log10()
+#priors are not influential but there is very little data
+```
+
+
+```{r}
+#trace plot 
+esubs.brm2$fit |> stan_trace()
+
+#border correlarion
+esubs.brm2$fit |> stan_ac()
+
+#chain convergence
+esubs.brm2$fit |> stan_rhat()
+#all values less than 1.01
+
+#effective sample size
+esubs.brm2$fit |> stan_ess() # there are no issues here
+#values higher than 0.5 and as close to 1 as possible, otherwise it means that the sampler drifted away
+
+#check the densities
+esubs.brm2$fit |> stan_dens(separate_chains=TRUE)
+#this plot is good if we have high hats 
+
+```
+```{r}
+#probability check
+esubs.brm2 |> pp_check(type='dens_overlay', ndraws=100)
+#not the best fit it could be 
+
+#sim residuals 
+esubs.resids  = make_brms_dharma_res(esubs.brm2, integerResponse= TRUE)
+testUniformity(esubs.resids)
+#simulated residuals are not too bad, acceptable
+
+#check no patterns in the residuals 
+plotResiduals(esubs.resids, quantreg = TRUE)
+#no issues here, looks half decent
+#the diagnostics look fine but we know we need to check other things based on the pp check
+
+```
+```{r}
+# generic summary 
+esubs.brm2 |> summary() 
+
+#thorough results
+esubs.brm2 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median=~exp(median(.x)), 
+    hdi = ~HDInterval::hdi(exp(.x)),
+    rhat, 
+    ess_bulk,
+    Pl=~mean(.x<1), 
+    Pg=~mean(.x>1))
+```
+
+```{r}
+#standardising the cost_km into smaller values
+msubs<- msubs |> 
+   mutate(lCost_km=log(Cost_km)) |> 
+  mutate(lSize=log(Size))
+#model formula 
+#by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
+form = bf(lCost_km ~ scale(lSize) + scale(GDP_pc) + Protection_level, family=gaussian)
+# mean for each group and mads for each group for our priors
+msubs |> 
+  group_by(Protection_level) |>
+  summarise(Median=median(lCost_km), MAD=mad(lCost_km))
+
+#getting standard priors
+get_prior(form, data=msubs)
+
+#setting priors
+priors = prior(normal(9, 1), class='Intercept') +
+  prior(normal(0,1), class='b') #within brackets add lb=0
+
+# running the model with priors only
+msubs.brm1 = brm(form, 
+               data=msubs, 
+               prior=priors,
+               sample_prior='only', 
+               iter= 5000, 
+               warmup = 1000, 
+               chains=3, 
+               cores = 3, 
+               thin=5, 
+               refresh=0, 
+               seed=123, 
+               control = list(adapt_delta=0.99, max_treedepth=15),
+               backend = "cmdstanr")
+
+#making a conditional plot
+msubs.brm1 |>
+  conditional_effects() |> 
+  plot(points=TRUE, ask=FALSE, plot=FALSE) |> 
+  wrap_plots() &
+  scale_y_log10()
+
+# running the model with both priors and data
+msubs.brm2 = msubs.brm1 |> 
+  update(sample_prior = 'yes', refresh=0)
+#Assess priors and posteriors
+msubs.brm2 |> SUYR_prior_and_posterior() # this does not run because i hano intercept in the model 
+#Produce the same conditional plot but with the posteriors
+msubs.brm2 |>
+  conditional_effects() |> 
+  plot(points=TRUE) |> 
+  wrap_plots()
+```
+
+```{r}
+msubs.brm2 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(median=~exp(median(.x)), 
+                  hdi = ~HDInterval::hdi(exp(.x)),
+                  rhat, 
+                  ess_bulk,
+                  Pl=~mean(.x<1), 
+                  Pg=~mean(.x>1))
+```
+
+
+
+

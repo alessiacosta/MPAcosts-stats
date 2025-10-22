@@ -7,11 +7,11 @@ RCN15,"Roja-Nazar et al., 2015",New Zealand,Kapiti Marine Reserve,174.9766
 RCN15,"Roja-Nazar et al., 2015",New Zealand,Tonga Island Marine Reserve,173.0233,-40.8193,Fully protected area,18.35
 RCN15,"Roja-Nazar et al., 2015",New Zealand,Te Tapuwae o Rongokako Marine Reserve,177.9175,-39.9125,Fully protected area,24.52
 RCN15,"Roja-Nazar et al., 2015",New Zealand,Tapuae Marine Reserve,171.428,-43.784,Fully protected area,14.04
-PB18,"Pascal et al., 2018",Saint Martin,Saint Martin Natural Reserve,-63.08,18.0695,Fully protected area,28
+PB18,"Pascal et al., 2018",Saint Martin,Saint Martin Natural Reserve,-64,20,Fully protected area,28
 PB18,"Pascal et al., 2018",Vanuatu,"Emua, Worasifiu, Laonamoa, Piliura, Unakap",167.747,-15.419,Multi-use area,0.75
 MSZ11,"McCrea-Strub et al., 2011",Philippines,Bibilik MPA,124.6763,12.649,Fully protected area,0.2
 MSZ11,"McCrea-Strub et al., 2012",Philippines,Talisay MPA,123.9336,10.3055,Multi-use area,0.3
-MSZ11,"McCrea-Strub et al., 2013",Tanzania,CHICOP,39.183056,-6.2775,Fully protected area,0.5
+MSZ11,"McCrea-Strub et al., 2013",Tanzania,CHICOP,39.183056,-8,Fully protected area,0.5
 MSZ11,"McCrea-Strub et al., 2014",Philippines,Villahermosa MS,121.1136,12.423,Multi-use area,0.7
 MSZ11,"McCrea-Strub et al., 2015",Philippines,Tambunan MPA,125.1712,7.6516,Fully protected area,1
 MSZ11,"McCrea-Strub et al., 2016",Philippines,MISSTA MPA,123.7556,12.9815,Fully protected area,1.6
@@ -25,7 +25,7 @@ MSZ11,"McCrea-Strub et al., 2023",USA,PMNM,-159,25.7,Fully protected area,362
 "BA11, H13","Ban et al., 2011; Hunt, 2013",Australia,Coral Sea Marine Park,151.4,-17.3,Multi-use area,990000
 HF10,"Haisfield et al., 2010",Indonesia,Komodo National Park,119.4515,-8.546,Multi-use area,1817
 "L24, A96","Libecap, 2024",Australia,Great Barrier Reef Marine Reserve,147.485962,-18.15629,Multi-use area,34440
-GL14,"Gustavsson et al., 2014",Tanzania,Mnemba-Chwaka Bay Marine Conservation Area (MIMCA),39,-5.5,Multi-use area,337.3
+GL14,"Gustavsson et al., 2014",Tanzania,Mnemba-Chwaka Bay Marine Conservation Area (MIMCA),40.5,-5.5,Multi-use area,337.3
 GF13,"Gleason et al., 2013",USA,Marine Life Protection Act (MLPA) in California,-120,33.9833,Multi-use area,2197
 SK23,"Suparyana et al., 2023",Indonesia,Ujung Kulon National Park,105.3751,-6.7847,Multi-use area,44.337
 P20,"Pantzar, 2020",Sweden,Kosterhavet marine national park,11.0167,58.8333,Multi-use area,389

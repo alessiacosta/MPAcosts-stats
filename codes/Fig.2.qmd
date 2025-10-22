@@ -23,7 +23,6 @@ library(patchwork)
 ```{r}
 #upload the right data
 fig1 <- read_csv("../Data/fig.1.csv")
-View(fig1)
 # Get world map data
 world <- ne_countries(scale = "medium", returnclass = "sf")
 # Load the coastline data from rnaturalearth
@@ -41,7 +40,6 @@ fig1_tally <- fig1 |>
   tally() |> 
   arrange(desc(n)) |> 
   mutate(official_name = as.character(Country))
-View(fig1_tally)
 ```
 
 

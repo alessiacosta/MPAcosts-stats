@@ -179,7 +179,7 @@ esubs <- esubs |>
 
 #form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
 #correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
-form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + Protection_level, family=gaussian)
+form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(lSize)*Protection_level, family=gaussian)
 #View(esubs)
 # mean for each group and mads for each group for our priors
 esubs |> group_by(Protection_level) |>
@@ -291,8 +291,8 @@ esubs.brm2 |>
     hdi = ~HDInterval::hdi(exp(.x)),
     rhat, 
     ess_bulk,
-    Pl=~mean(.x<0), 
-    Pg=~mean(.x>0))
+    Pl=~mean(.x<1), 
+    Pg=~mean(.x>1))
 
 #Paritally protected (0.062-1)*100= -93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
@@ -305,8 +305,8 @@ esubs.brm2 |>
     hdi = ~HDInterval::hdi(.x),
     rhat, 
     ess_bulk,
-    Pl=~mean(.x<1), 
-    Pg=~mean(.x>1))
+    Pl=~mean(.x<0), 
+    Pg=~mean(.x>0))
 
 #the amount of variability explained by the model -quasi R sqaured
 esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
@@ -350,13 +350,10 @@ pred_size <- pred_draws |>
       upper.HPD = hdi_vals[2]
     )
   })
-# export the dataset 
-write_csv(pred_size, "../Data/pred_size.csv")
 
-#View(pred_size)
 #producing a predicted ggplot
   lesize = 
-  ggplot(pred_size, aes(x = lSize, y = median)) +
+  ggplot(pred_size, aes(x = lSize, y = response)) +
   geom_line(size = 0.8) +  # thinner line
   geom_point(data=esubs, aes(x=lSize, y=Cost_km)) + 
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
@@ -370,7 +367,7 @@ write_csv(pred_size, "../Data/pred_size.csv")
       limits = c(1e0, 1e07))
   
 nesize = 
-  ggplot(pred_size, aes(x = lSize, y = median)) +
+  ggplot(pred_size, aes(x = lSize, y = response)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   theme_bw() +
@@ -386,8 +383,7 @@ nesize =
 
  #Combine and export the inset
 png("../Results/establishment_size.png", width = 1000, height = 1300, res = 300) 
-#final_plot <- 
-esize = 
+#esize = 
 nesize + 
   inset_element(
     lesize,
@@ -450,7 +446,6 @@ pred_size1 <- pred_draws1 |>
       upper.HPD = hdi_vals[2]
     )
   })
-View(pred_size1)
 
 #plot prediction
 # log transformed axis
@@ -567,7 +562,7 @@ msubs<- msubs |>
   mutate(lSize=log(Size))
 #model formula 
 #by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
-form = bf(lCost_km ~ scale(lSize) + scale(GDP_pc) + Protection_level, family=gaussian)
+form = bf(lCost_km ~ scale(lSize) + scale(GDP_pc) + scale(lSize)*Protection_level, family=gaussian)
 # mean for each group and mads for each group for our priors
 msubs |> 
   group_by(Protection_level) |>
@@ -666,8 +661,8 @@ msubs.brm2 |>
                   hdi = ~HDInterval::hdi(exp(.x)),
                   rhat, 
                   ess_bulk,
-                  Pl=~mean(.x<0), 
-                  Pg=~mean(.x>0))
+                  Pl=~mean(.x<1), 
+                  Pg=~mean(.x>1))
 #Partially protected (1-0.062)*100= 93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
 #the amount of variability explained by the model -quasi R squared
@@ -789,9 +784,6 @@ pred_size_e <- pred_draws_e |>
     )
   })
 
-# export the dataset 
-write_csv(pred_size_e, "../Data/pred_size_e.csv")
-
 fpe <- subset(pred_size_e, Protection_level == "Fully protected")
 mubse <- subset(pred_size_e, Protection_level == "Partially protected")
 # Create the plot
@@ -893,8 +885,6 @@ pred_size2 <- pred_draws_m |>
   #  "Multi-use areas" = "Partially protected",
    # "Fully Protected Areas" = "Fully protected"
   #))
-#View(msubs)
-write_csv(pred_size2, "../Data/pred_size_m_protection.csv")
 
 fp <- subset(pred_size2, Protection_level == "Fully protected")
 mubs <- subset(pred_size2, Protection_level == "Partially protected")
@@ -1003,7 +993,6 @@ pred_GDP <- pred_draws_GDP |>
     )
   })
 
-View(pred_GDP)
 #producing a predicted ggplot
 #untransformed axis
 neGDP_pc = 
