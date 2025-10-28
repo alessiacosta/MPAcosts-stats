@@ -191,17 +191,21 @@ GDP_base <-
     geom_line(size = 0.8) +
     geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
     scale_y_continuous(
-      labels = label_scientific()) +
+      labels = scales::label_number(scale = 1e-3)) +
     scale_x_continuous(
-      labels = label_scientific()) +
+      labels = scales::label_number(scale = 1e-3)) +
     theme_bw() +
     theme(text = element_text(family = "serif") #,   
           #panel.grid.minor = element_blank(), 
           #panel.grid.major=element_blank()) +
           ) +
     labs(
-      x = "GDP per capita (2024 USD)",
-      y = "Estimated maintenance costs ($/km² p.a.)")
+      x = "GDP per capita (thousand US$)",
+      y = "Estimated maintenance costs (thousand US$/km² p.a.)", 
+      title = " ") + 
+   coord_cartesian(clip="off") +
+  annotate("text", x=-Inf, y=Inf, label="A", hjust=1.7, vjust=0, size=5, fontface="bold", family='serif')
+GDP_base
 
 # creating the inset plot with log10 scale for the y axis
 GDP_inset <-
@@ -214,9 +218,28 @@ GDP_inset <-
         axis.title = element_blank(), 
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
-  scale_y_log10() +
+  scale_y_log10(
+    labels = scales::label_log()
+  ) +
   scale_x_continuous(
-    labels = label_scientific())
+    labels = scales::label_number(scale = 1e-3))
+GDP_inset
+# combining base and inset plot for establishment
+est_GDP <- 
+  GDP_base + inset_element(
+    GDP_inset,
+    left = 0.3, # 25% distance from the left  
+    bottom = 0.45, # 45% distance from the bottom
+    right = 0.95, 
+    top = 0.98)
+
+# combining establishment and maintenance gdp per capita plots 
+total_GDP <- 
+  est_GDP + GDP 
+png("../Results/Fifgure GDP.png", width = 2500, height = 1600, res = 300)
+total_GDP
+dev.off()
+  
 ```
 
 

@@ -1013,25 +1013,29 @@ pred_GDP <- pred_draws_GDP |>
 
 #producing a predicted ggplot
 #untransformed axis
-neGDP_pc = 
+neGDP_pc <- 
   ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
     geom_line(size = 0.8) +
     geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
     scale_y_continuous(
-      labels = label_scientific()) +
+      labels = label_number(scale = 1e-3)) +
     scale_x_continuous(
-      labels = label_scientific()) +
+      labels = label_number(scale = 1e-3)) +
     theme_bw() +
     theme(text = element_text(family = "serif") #,   
           #panel.grid.minor = element_blank(), 
           #panel.grid.major=element_blank()) +
           ) +
     labs(
-      x = "GDP per capita (2024 USD)",
-      y = "Estimated maintenance costs ($/km² p.a.)")
+      x = "GDP per capita (thousand US$)",
+      y = "Estimated maintenance costs (thousand US$/km² p.a.)", 
+      title = " ") + 
+  coord_cartesian(clip="off") +
+  annotate("text", x=-Inf, y=Inf, label="B", hjust=1.7, vjust=0, size=5, fontface="bold", family='serif')
+neGDP_pc
 
 # transformed axis  
-leGDP_pc = 
+leGDP_pc <- 
  ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
@@ -1041,18 +1045,20 @@ leGDP_pc =
         axis.title = element_blank(), 
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
-  scale_y_log10() +
+  scale_y_log10(
+    labels = label_log()
+  ) +
   scale_x_continuous(
-    labels = label_scientific())
+    labels = label_number(scale = 1e-3))
   
 png("../Results/maintenance GDP.png", width = 1500, height = 1200, res = 300) 
-#GDP = 
+#GDP <- 
   neGDP_pc +
   inset_element(
     leGDP_pc,
-    left = 0.02, 
-    bottom = 0.55,
+    left = 0.05, 
+    bottom = 0.45,
     right = 0.5,
-    top = 0.95)
+    top = 0.98)
 dev.off()
 ```
