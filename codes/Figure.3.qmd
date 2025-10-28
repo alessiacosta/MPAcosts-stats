@@ -45,7 +45,7 @@ pred_year1 <- pred_draws1 |>
 # plotting 
 fpey <- subset(pred_year1, Protection_level == "Fully protected")
 mubsey <- subset(pred_year1, Protection_level == "Partially protected")
-# Create the plot
+# Create the plot - base plot 
 neyear_pl <- 
   ggplot() +
   # Fully protected areas
@@ -59,8 +59,8 @@ neyear_pl <-
   scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   # Scientific notation for y-axis
   scale_y_continuous(
-    #labels = scales::label_scientific(), 
-                     limits=c(0, 2.e06)) +
+    labels = scales::label_number(scale = 1e-6), 
+                     limits=c(0, 2e06)) +
   # Apply theme
   theme_bw() +
   theme(text = element_text(family = "serif"), 
@@ -73,12 +73,12 @@ neyear_pl <-
   # Labels
   labs(
     x = "Establishment phase (years)",
-    y = "Estimated establishment costs ($/km²)",
+    y = "Estimated establishment costs (million US$/km²)",
     color = "Degree of Protection",
     fill = "Degree of Protection") +
   coord_cartesian(clip="off") 
-  # annotate("text", x=-Inf, y=Inf, label="B", hjust=4, vjust=0.3, size=5, fontface="bold", family='serif')
 
+# Creating inset plot with log10 scale for teh y axis
 leyear_pl = 
   ggplot() +
   geom_line(data = fpey, aes(x = Years, y = median), color = "#0072B2", size = 0.8) +
@@ -95,7 +95,7 @@ leyear_pl =
                "Partially protected" = "Multi-use areas")
   ) +
   scale_y_log10(
-    #labels = scales::label_scientific(), 
+    labels = scales::label_log(), 
                 limits = c(1e0, 1.0e+07)) +
   theme_bw() +
   theme(text = element_text(family = "serif", size=10),
@@ -121,3 +121,110 @@ dev.off()
     # caption = "Establishment phase (years)")
 
 ```
+# plotting GDP per capita vs establishment costs 
+```{r}
+# setting the model formula
+formGDP = bf(lCost_km ~ scale(GDP_pc), family=gaussian)
+# setting my priors
+priors = prior(normal(11, 1.8), class='Intercept') +
+  prior(normal(0,1.8), class='b')
+# running the model with priors only
+GDP.brm1 = brm(formGDP, 
+               data=esubs, 
+               prior=priors,
+               sample_prior='only', 
+               iter= 5000, 
+               warmup = 1000, 
+               chains=3, 
+               cores = 3, 
+               thin=5, 
+               refresh=0, 
+               seed=123, 
+               control = list(adapt_delta=0.99, max_treedepth=29),
+               backend = "cmdstanr")
+# running the model with both priors and data
+GDP.brm2 = GDP.brm1 |> 
+  update(sample_prior = 'yes', refresh=100)
+# Assess priors and posteriors
+GDP.brm2 |> SUYR_prior_and_posterior()
+# summarising results
+#thorough results
+GDP.brm2 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median=~exp(median(.x)), 
+    hdi = ~HDInterval::hdi(exp(.x)),
+    rhat, 
+    ess_bulk,
+    Pl=~mean(.x<1), 
+    Pg=~mean(.x>1))
+```
+## Plottign establisxhment costs x GDP per capita
+```{r}
+# creating prediction dataframe
+pred_draws_GDP_e <- emmeans(
+  GDP.brm2,
+  ~ GDP_pc,
+  at = list(
+    GDP_pc = seq(min(esubs$GDP_pc), max(esubs$GDP_pc), length.out = 100)
+  )) |>
+  gather_emmeans_draws() |>
+  mutate(.value = exp(.value))  # back-transform from log the response variable --> Cost_km
+
+# Now safely summarise per lSize using purrr
+pred_GDP_e <- pred_draws_GDP_e |>
+  group_split(GDP_pc) |>
+  map_dfr(function(df) {
+    hdi_vals <- hdi(df$.value)
+    tibble(
+      GDP_pc    = unique(df$GDP_pc),
+      response  = median(df$.value),
+      lower.HPD = hdi_vals[1],
+      upper.HPD = hdi_vals[2]
+    )
+  })
+
+# creating the base plot
+GDP_base <- 
+  ggplot(pred_GDP_e, aes(x = GDP_pc, y = response)) +
+    geom_line(size = 0.8) +
+    geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+    scale_y_continuous(
+      labels = label_scientific()) +
+    scale_x_continuous(
+      labels = label_scientific()) +
+    theme_bw() +
+    theme(text = element_text(family = "serif") #,   
+          #panel.grid.minor = element_blank(), 
+          #panel.grid.major=element_blank()) +
+          ) +
+    labs(
+      x = "GDP per capita (2024 USD)",
+      y = "Estimated maintenance costs ($/km² p.a.)")
+
+# creating the inset plot with log10 scale for the y axis
+GDP_inset <-
+ ggplot(pred_GDP_e, aes(x = GDP_pc, y = response)) +
+  geom_line(size = 0.8) +  # thinner line
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+  geom_point(data=msubs, aes(x=GDP_pc, y=Cost_km)) +
+  theme_bw() +
+  theme(text = element_text(family = "serif"), 
+        axis.title = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  scale_y_log10() +
+  scale_x_continuous(
+    labels = label_scientific())
+```
+
+
+
+
+
+
+
+
+
+
