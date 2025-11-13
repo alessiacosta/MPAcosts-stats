@@ -380,8 +380,8 @@ pred_size <- pred_draws |>
   })
 
 #producing a predicted ggplot
-  lesize = 
-  ggplot(pred_size, aes(x = lSize, y = response)) +
+  #lesize = 
+  ggplot(pred_size, aes(x = Size, y = response)) +
   geom_line(size = 0.8) +  # thinner line
   geom_point(data=esubs, aes(x=lSize, y=Cost_km)) + 
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
@@ -390,9 +390,12 @@ pred_size <- pred_draws |>
         axis.title = element_blank(),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
-  scale_y_log10(
-      labels = label_scientific(),
-      limits = c(1e0, 1e07))
+  #scale_y_log10(
+     # labels = label_scientific(),
+      #limits = c(1e0, 1e07)) +
+    scale_x_continuous(
+      trans = "log"
+    )
   
 nesize = 
   ggplot(pred_size, aes(x = lSize, y = response)) +
@@ -634,7 +637,7 @@ msubs.brm2 |> SUYR_prior_and_posterior() # this does not run because i hano inte
 msubs.brm2 |>
   conditional_effects() |> 
   plot(points=TRUE) |> 
-  wrap_plots()
+  wrap_plots() # jitter gdp per capita and lsize
 ```
 
 #### MCMC sampling diagnostics
