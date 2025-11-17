@@ -311,34 +311,6 @@ esubs.brm2 |>
 #the amount of variability explained by the model -quasi R squared
 esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 #we are explaining 40% of the variance with this model -  which should be a pretty good fit for the model
-
-# calculating the partial R2
-# 1, fitting a model with posteriors only
-esubs.brm3 <- brm(
-  form1,
-  data = esubs,
-  prior = priors,
-  iter = 5000,
-  warmup = 1000,
-  chains = 3,
-  cores = 3,
-  thin = 5,
-  seed = 123,
-  control = list(adapt_delta=0.99, max_treedepth=29),
-  backend = "cmdstanr")
-# 2. run the partial r2 code for size
-partial_r2 <- bayes_R2(esubs.brm3, summary = FALSE) - 
-              bayes_R2(update(esubs.brm3, formula. = . ~ . - scale(lSize) - scale(lSize):Protection_level), summary = FALSE)
-tidybayes::median_hdci(partial_r2) # 52.5% of variance
-# same calculation for years
-partial_r3 <- bayes_R2(esubs.brm3, summary = FALSE) - 
-              bayes_R2(update(esubs.brm3, formula. = . ~ . - scale(Years)), summary = FALSE)
-tidybayes::median_hdci(partial_r3)
-# same for degrees of protection 
-partial_r4 <- bayes_R2(esubs.brm3, summary = FALSE) - 
-              bayes_R2(update(esubs.brm3, formula. = . ~ . - Protection_level), summary = FALSE)
-tidybayes::median_hdci(partial_r4)
-
 ```
 
 #### Plot results - predictions
@@ -380,7 +352,7 @@ pred_size <- pred_draws |>
   })
 
 #producing a predicted ggplot
-  #lesize = 
+  lesize = 
   ggplot(pred_size, aes(x = Size, y = response)) +
   geom_line(size = 0.8) +  # thinner line
   geom_point(data=esubs, aes(x=lSize, y=Cost_km)) + 
@@ -394,8 +366,7 @@ pred_size <- pred_draws |>
      # labels = label_scientific(),
       #limits = c(1e0, 1e07)) +
     scale_x_continuous(
-      trans = "log"
-    )
+      trans = "log")
   
 nesize = 
   ggplot(pred_size, aes(x = lSize, y = response)) +
@@ -698,25 +669,7 @@ msubs.brm2 |>
 
 #the amount of variability explained by the model -quasi R squared
 msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
-#we are explaining 10% of the variance with this model -  which should be a pretty good fit for the model
-# calculating the partial R2
-# 1, fitting a model with posteriors only
-msubs.brm3 <- brm(
-  form,
-  data = msubs,
-  prior = priors,
-  iter = 5000,
-  warmup = 1000,
-  chains = 3,
-  cores = 3,
-  thin = 5,
-  seed = 123,
-  control = list(adapt_delta=0.99, max_treedepth=29),
-  backend = "cmdstanr")
-# 2. run the partial r2 code for size
-partial_r2m <- bayes_R2(msubs.brm3, summary = FALSE) - 
-              bayes_R2(update(msubs.brm3, formula. = . ~ . - scale(lSize) - scale(lSize):Protection_level), summary = FALSE)
-tidybayes::median_hdci(partial_r2m) # 29% variance
+#we are explaining 41% of the variance with this model -  which should be a pretty good fit for the model
 ```
 
 #### Plot results - predictions
