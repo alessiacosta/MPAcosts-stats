@@ -1032,7 +1032,8 @@ neGDP_pc <-
     geom_line(size = 0.8, linetype = "dashed") +
     geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
     scale_y_continuous(
-      labels = label_number(scale = 1e-3)) +
+      labels = label_number(scale = 1e-3),
+      limits = c(0, 175000)) +
     scale_x_continuous(
       labels = label_number(scale = 1e-3)) +
     theme_bw() +
@@ -1060,19 +1061,20 @@ leGDP_pc <-
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
   scale_y_log10(
+    limits = c(1, 1e06),
     labels = label_log()
   ) +
   scale_x_continuous(
     labels = label_number(scale = 1e-3))
   
 png("../Results/maintenance GDP.png", width = 1500, height = 1200, res = 300) 
-#GDP <- 
+GDP <- 
   neGDP_pc +
   inset_element(
     leGDP_pc,
     left = 0.05, 
     bottom = 0.45,
-    right = 0.5,
+    right = 0.7,
     top = 0.98)
 dev.off()
 ```
