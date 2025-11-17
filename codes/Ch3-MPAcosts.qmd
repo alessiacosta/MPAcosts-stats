@@ -351,7 +351,7 @@ pred_size <- pred_draws |>
     )
   })
 
-#producing a predicted ggplot
+#producing a predicted ggplot - inset plot
   lesize = 
   ggplot(pred_size, aes(x = Size, y = response)) +
   geom_line(size = 0.8) +  # thinner line
@@ -362,14 +362,14 @@ pred_size <- pred_draws |>
         axis.title = element_blank(),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
-  #scale_y_log10(
-     # labels = label_scientific(),
-      #limits = c(1e0, 1e07)) +
+  scale_y_log10(
+     labels = label_scientific(),
+      limits = c(1e0, 1e07)) +
     scale_x_continuous(
       trans = "log")
-  
+# backtransformed data - main plot 
 nesize = 
-  ggplot(pred_size, aes(x = lSize, y = response)) +
+  ggplot(pred_size, aes(x = Size, y = response)) +
   geom_line(size = 0.8) +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   theme_bw() +
@@ -378,6 +378,8 @@ nesize =
     labels = label_scientific(),
     limits = c(0, 1.0e+06)  # forces the axis to go up to 1e6
   ) +
+   scale_x_continuous(
+      trans = "log")
   labs(
     x = "lnSize (km²)",
     y = "Estimated establishment costs ($/km²)"
@@ -792,11 +794,11 @@ mubse <- subset(pred_size_e, Protection_level == "Partially protected")
 nesize_pl <- 
   ggplot() +
   # Fully protected areas
-  geom_line(data = fpe, aes(x = lSize, y = median, color = "Fully protected areas"), size = 0.8) +
-  geom_ribbon(data = fpe, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD, fill = "Fully protected areas"), alpha = 0.2) +
+  geom_line(data = fpe, aes(x = Size, y = median, color = "Fully protected areas"), size = 0.8) +
+  geom_ribbon(data = fpe, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD, fill = "Fully protected areas"), alpha = 0.2) +
   # Partially protected areas
-  geom_line(data = mubse, aes(x = lSize, y = median, color = "Multi-use areas"), size = 0.8) +
-  geom_ribbon(data = mubse, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD, fill = "Multi-use areas"), alpha = 0.2) +
+  geom_line(data = mubse, aes(x = Size, y = median, color = "Multi-use areas"), size = 0.8) +
+  geom_ribbon(data = mubse, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD, fill = "Multi-use areas"), alpha = 0.2) +
   # Customize scales
   scale_color_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
@@ -804,8 +806,11 @@ nesize_pl <-
   scale_y_continuous(
     labels = scales::label_number(scale = 1e-6), 
     limits=c(0, 1.e06)) +
-  scale_x_continuous(
-    labels = function(x) parse(text = paste0("e^", x))) +  # this makes a e to the power label and "parse" makes it a superscript format
+ scale_x_continuous(
+   trans = "log",  # this makes the x axis on a ln scale
+   breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),  # tick positions in original scale
+    labels = scales::label_log()
+  ) +
   # Apply theme
   theme_bw() +
   theme(text = element_text(family = "serif"), 
@@ -820,17 +825,18 @@ nesize_pl <-
     fill = "Degree of Protection", 
     title = " ") +
   coord_cartesian(clip="off") +
-  annotate("text", x=-Inf, y=Inf, label="A", hjust=1.7, vjust=0.3, size=5, fontface="bold", family='serif')
-#transformed axis
+  annotate("text", x=1, y=Inf, label="A", hjust=4.3, vjust=0.4, size=5, fontface="bold", family='serif')
+nesize_pl
+#inset plot with transformed axis
 lesize_pl = 
   ggplot() +
-  geom_line(data = fpe, aes(x = lSize, y = median), color = "#0072B2", size = 0.8) +
-  geom_line(data = mubse, aes(x = lSize, y = median), color = "#E69F00", size = 0.8) +
-  geom_ribbon(data = fpe, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
+  geom_line(data = fpe, aes(x = Size, y = median), color = "#0072B2", size = 0.8) +
+  geom_line(data = mubse, aes(x = Size, y = median), color = "#E69F00", size = 0.8) +
+  geom_ribbon(data = fpe, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD),
               fill = "#0072B2", alpha = 0.2, color = NA) +
-  geom_ribbon(data = mubse, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
+  geom_ribbon(data = mubse, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD),
               fill = "#E69F00", alpha = 0.2, color = NA) +
-  geom_point(data = esubs, aes(x = lSize, y = Cost_km, color = Protection_level),
+  geom_point(data = esubs, aes(x = Size, y = Cost_km, color = Protection_level),
              show.legend = FALSE) +
   scale_color_manual(
     values = c("Fully protected" = "#0072B2", "Partially protected" = "#E69F00"),
@@ -839,8 +845,10 @@ lesize_pl =
   ) +
   scale_y_log10(labels = scales::label_log(), 
                 limits = c(1e0, 1.0e+07)) +
-  scale_x_continuous(
-    labels = function(x) parse(text = paste0("e^", x))) + # this makes a e to the power label and "parse" makes it a superscript format
+ scale_x_continuous(
+      trans = "log",  # this makes the x axis on a ln scale
+      breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
+       labels = scales::label_log()) + 
   theme_bw() +
   theme(text = element_text(family = "serif", size=7),
          axis.title = element_blank(),
@@ -851,7 +859,7 @@ lesize_pl =
    # x = "lnSize (km²)",
     #y = "Estimated maintenance costs (cost/km² p.a.)",
     #color = "Protection status")
-  
+lesize_pl
 tot_e <- nesize_pl +
   inset_element(
     lesize_pl,
@@ -903,11 +911,11 @@ mubs <- subset(pred_size2, Protection_level == "Partially protected")
 nmsize_pl = 
   ggplot() +
   # Fully protected areas
-  geom_line(data = fp, aes(x = lSize, y = median, color = "Fully protected areas"), size = 0.8) +
-  geom_ribbon(data = fp, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD, fill = "Fully protected areas"), alpha = 0.2) +
+  geom_line(data = fp, aes(x = Size, y = median, color = "Fully protected areas"), size = 0.8) +
+  geom_ribbon(data = fp, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD, fill = "Fully protected areas"), alpha = 0.2) +
   # Partially protected areas
-  geom_line(data = mubs, aes(x = lSize, y = median, color = "Multi-use areas"), size = 0.8) +
-  geom_ribbon(data = mubs, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD, fill = "Multi-use areas"), alpha = 0.2) +
+  geom_line(data = mubs, aes(x = Size, y = median, color = "Multi-use areas"), size = 0.8) +
+  geom_ribbon(data = mubs, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD, fill = "Multi-use areas"), alpha = 0.2) +
   # Customize scales
   scale_color_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
@@ -916,7 +924,9 @@ nmsize_pl =
     labels = scales::label_number(scale = 1e-6), 
     limits=c(0, 1.e06)) +
   scale_x_continuous(
-    labels = function(x) parse(text = paste0("e^", x))) +  # this makes a e to the power label and "parse" makes it a superscript format
+    trans = "log",  # this makes the x axis on a ln scale
+      breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
+       labels = scales::label_log()) + 
   # Apply theme
   theme_bw() +
   theme(text = element_text(family = "serif")) + 
@@ -930,19 +940,19 @@ nmsize_pl =
     fill = "Degree of protection", 
     title = " ") +
   coord_cartesian(clip="off") +
-  annotate("text", x=-Inf, y=Inf, label="B", hjust=1.7, vjust=0.3, size=5, fontface="bold", family='serif')
+  annotate("text", x=1, y=Inf, label="B", hjust=5.5, vjust=0.4, size=5, fontface="bold", family='serif')
 nmsize_pl
 
 # plotting with an inset with log10 y axis 
 lmsize_pl = 
   ggplot() +
-  geom_line(data = fp, aes(x = lSize, y = median), color = "#0072B2", size = 0.8) +
-  geom_line(data = mubs, aes(x = lSize, y = median), color = "#E69F00", size = 0.8) +
-  geom_ribbon(data = fp, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
+  geom_line(data = fp, aes(x = Size, y = median), color = "#0072B2", size = 0.8) +
+  geom_line(data = mubs, aes(x = Size, y = median), color = "#E69F00", size = 0.8) +
+  geom_ribbon(data = fp, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD),
               fill = "#0072B2", alpha = 0.2, color = NA) +
-  geom_ribbon(data = mubs, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD),
+  geom_ribbon(data = mubs, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD),
               fill = "#E69F00", alpha = 0.2, color = NA) +
-  geom_point(data = msubs, aes(x = lSize, y = Cost_km, color = Protection_level),
+  geom_point(data = msubs, aes(x = Size, y = Cost_km, color = Protection_level),
              show.legend = FALSE) +
   scale_color_manual(
     values = c("Fully protected" = "#0072B2", "Partially protected" = "#E69F00"),
@@ -953,7 +963,9 @@ lmsize_pl =
     labels = scales::label_log(), 
     limits = c(1e0, 1.0e+07)) +
   scale_x_continuous(
-    labels = function(x) parse(text = paste0("e^", x))) + # this makes a e to the power label and "parse" makes it a superscript format
+   trans = "log",  # this makes the x axis on a ln scale
+      breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
+       labels = scales::label_log()) + 
   theme_bw() +
   theme(text = element_text(family = "serif", size=7), 
         axis.title = element_blank(),
@@ -1017,7 +1029,7 @@ pred_GDP <- pred_draws_GDP |>
 #untransformed axis
 neGDP_pc <- 
   ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
-    geom_line(size = 0.8) +
+    geom_line(size = 0.8, linetype = "dashed") +
     geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
     scale_y_continuous(
       labels = label_number(scale = 1e-3)) +
@@ -1039,7 +1051,7 @@ neGDP_pc
 # transformed axis  
 leGDP_pc <- 
  ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
-  geom_line(size = 0.8) +  # thinner line
+  geom_line(size = 0.8, linetype = "dashed") +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   geom_point(data=msubs, aes(x=GDP_pc, y=Cost_km)) +
   theme_bw() +
