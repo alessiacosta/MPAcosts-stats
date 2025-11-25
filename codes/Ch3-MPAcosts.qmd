@@ -161,7 +161,7 @@ hist(esubs$Cost_km, nclass=75)
 hist(log(esubs$Cost_km), nclass=75)
 #plot(esubs$lCost_km~esubs$GDP_pc)
 esubs <- esubs |>  na.omit() # removing NAs from the data
-#cor(esubs$lSize, esubs$GDP_pc)
+cor(esubs$lSize, esubs$GDP_pc)
 #cor(esubs$Years, esubs$GDP_pc, use = "complete.obs")
 #cor(esubs$Years, esubs$lSize, use = "complete.obs")
 #library(corrplot)
@@ -669,6 +669,18 @@ msubs.brm2 |>
                   Pg=~mean(.x>1))
 #Partially protected (1-0.062)*100= 93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
+# summary of draws on a log scale  - not backtransformed
+msubs.brm2 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median=median, 
+                  hdi = ~HDInterval::hdi(.x),
+                  rhat, 
+                  ess_bulk,
+                  Pl=~mean(.x<0), 
+                  Pg=~mean(.x>0))
+
 #the amount of variability explained by the model -quasi R squared
 msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 #we are explaining 41% of the variance with this model -  which should be a pretty good fit for the model
@@ -804,7 +816,7 @@ nesize_pl <-
   scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   # Scientific notation for y-axis
   scale_y_continuous(
-    labels = scales::label_number(scale = 1e-6), 
+    labels = scales::label_number(), 
     limits=c(0, 1.e06)) +
  scale_x_continuous(
    trans = "log",  # this makes the x axis on a ln scale
@@ -813,14 +825,15 @@ nesize_pl <-
   ) +
   # Apply theme
   theme_bw() +
-  theme(text = element_text(family = "serif"), 
+  theme(text = element_text(family = "serif"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 0.2),
         #panel.grid.major = element_blank(),
         #panel.grid.minor = element_blank(), 
         legend.position = "none") +
   # Labels
   labs(
     x = "Size (km²)",
-    y = "Estimated establishment costs (million US$/km²)",
+    y = "Estimated establishment costs (US$/km²)",
     color = "Degree of Protection",
     fill = "Degree of Protection", 
     title = " ") +
@@ -843,7 +856,8 @@ lesize_pl =
     labels = c("Fully protected" = "Fully protected areas",
                "Partially protected" = "Multi-use areas")
   ) +
-  scale_y_log10(labels = scales::label_log(), 
+  scale_y_log10(
+    labels = scales::label_log(), 
                 limits = c(1e0, 1.0e+07)) +
  scale_x_continuous(
       trans = "log",  # this makes the x axis on a ln scale
@@ -921,7 +935,7 @@ nmsize_pl =
   scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   # Scientific notation for y-axis
   scale_y_continuous(
-    labels = scales::label_number(scale = 1e-6), 
+    labels = scales::label_number(), 
     limits=c(0, 1.e06)) +
   scale_x_continuous(
     trans = "log",  # this makes the x axis on a ln scale
@@ -929,13 +943,14 @@ nmsize_pl =
        labels = scales::label_log()) + 
   # Apply theme
   theme_bw() +
-  theme(text = element_text(family = "serif")) + 
+  theme(text = element_text(family = "serif"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 0.2)) + 
         #panel.grid.major = element_blank(),
         #panel.grid.minor = element_blank()) +
   # Labels
   labs(
     x = "Size (km²)",
-    y = "Estimated maitenance costs (million US$/km² p.a.)",
+    y = "Estimated maitenance costs (US$/km² p.a.)",
     color = "Degree of protection",
     fill = "Degree of protection", 
     title = " ") +
@@ -989,7 +1004,7 @@ tot_m <- nmsize_pl +
 # combine plots
 combined_plot <- tot_e + tot_m
 # Export the plot
-png("../Results/protection level size.png", width = 2500, height = 1400, res = 300)
+png("../Results/protection level size.png", width = 2600, height = 1400, res = 300)
 combined_plot
 dev.off()
 ```
@@ -1032,18 +1047,19 @@ neGDP_pc <-
     geom_line(size = 0.8, linetype = "dashed") +
     geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
     scale_y_continuous(
-      labels = label_number(scale = 1e-3),
+      labels = label_number(),
       limits = c(0, 175000)) +
     scale_x_continuous(
       labels = label_number(scale = 1e-3)) +
     theme_bw() +
-    theme(text = element_text(family = "serif") #,   
+    theme(text = element_text(family = "serif"),   
           #panel.grid.minor = element_blank(), 
           #panel.grid.major=element_blank()) +
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 0.2)
           ) +
     labs(
       x = "GDP per capita (thousand US$)",
-      y = "Estimated maintenance costs (thousand US$/km² p.a.)", 
+      y = "Estimated maintenance costs (US$/km² p.a.)", 
       title = " ") + 
   coord_cartesian(clip="off") +
   annotate("text", x=-Inf, y=Inf, label="B", hjust=1.7, vjust=0, size=5, fontface="bold", family='serif')
@@ -1056,7 +1072,7 @@ leGDP_pc <-
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
   geom_point(data=msubs, aes(x=GDP_pc, y=Cost_km)) +
   theme_bw() +
-  theme(text = element_text(family = "serif"), 
+  theme(text = element_text(family = "serif"),
         axis.title = element_blank(), 
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
