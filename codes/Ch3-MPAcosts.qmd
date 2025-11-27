@@ -176,10 +176,12 @@ cor(esubs$lSize, esubs$GDP_pc)
 esubs <- esubs |> 
   mutate(lSize=log(Size), 
          lCost_km=log(Cost_km))
-
+esubs$ScaledSize <- scale(log(esubs$Size))
+esubs$ScaledSize <- esubs$ScaledSize - min(esubs$ScaledSize, na.rm=TRUE)
+summary(esubs)
 #form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
 #correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
-form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(lSize)*Protection_level, family=gaussian)
+form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + Protection_level, family=gaussian)
 #View(esubs)
 # mean for each group and mads for each group for our priors
 esubs |> group_by(Protection_level) |>
@@ -195,8 +197,8 @@ priors = prior(normal(11, 1.8), class='Intercept') +
 # running the model with priors only
 esubs.brm1 = brm(form1, 
                data=esubs, 
-               prior=priors,
-               sample_prior='only', 
+               #prior=priors,
+               sample_prior='yes', 
                iter= 5000, 
                warmup = 1000, 
                chains=3, 
@@ -283,7 +285,7 @@ plotResiduals(esubs.resids, quantreg = TRUE)
 esubs.brm2 |> summary() 
 
 #thorough results
-esubs.brm2 |> 
+esubs.brm1 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   summarise_draws(
@@ -297,7 +299,7 @@ esubs.brm2 |>
 #Paritally protected (0.062-1)*100= -93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
 # untransformed results
-esubs.brm2 |> 
+esubs.brm1 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   summarise_draws(
@@ -566,7 +568,7 @@ msubs<- msubs |>
   mutate(lSize=log(Size))
 #model formula 
 #by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
-form = bf(lCost_km ~ scale(lSize) + scale(GDP_pc) + scale(lSize)*Protection_level, family=gaussian)
+form = bf(lCost_km ~ scale(lSize) + scale(GDP_pc) + Protection_level, family=gaussian)
 # mean for each group and mads for each group for our priors
 msubs |> 
   group_by(Protection_level) |>
@@ -582,8 +584,8 @@ priors = prior(normal(9, 1), class='Intercept') +
 # running the model with priors only
 msubs.brm1 = brm(form, 
                data=msubs, 
-               prior=priors,
-               sample_prior='only', 
+               #prior=priors,
+               sample_prior='yes', 
                iter= 5000, 
                warmup = 1000, 
                chains=3, 
@@ -658,7 +660,7 @@ plotResiduals(msubs.resids, quantreg = TRUE)
 msubs.brm2 |> summary()
 
 #thorough results
-msubs.brm2 |> 
+msubs.brm1 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   summarise_draws(median=~exp(median(.x)), 
@@ -670,7 +672,7 @@ msubs.brm2 |>
 #Partially protected (1-0.062)*100= 93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
 # summary of draws on a log scale  - not backtransformed
-msubs.brm2 |> 
+msubs.brm1 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   summarise_draws(

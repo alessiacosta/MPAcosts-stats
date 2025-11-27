@@ -1,0 +1,12 @@
+---
+title: "frequentist"
+format: html
+---
+
+```{r}
+model1 = lm(lCost_km ~ ScaledSize + scale(Years) + ScaledSize*Protection_level, family=gaussian, data = esubs)
+summary(model1)
+model2 <- lm(lCost_km ~ scale(lSize) + scale(Years) + Protection_level, family=gaussian, data = esubs)
+summary(model2)
+```
+
