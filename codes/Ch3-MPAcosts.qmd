@@ -176,14 +176,15 @@ cor(esubs$lSize, esubs$GDP_pc)
 esubs <- esubs |> 
   mutate(lSize=log(Size), 
          lCost_km=log(Cost_km))
-summary(esubs)
+#summary(esubs)
 #form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
 #correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
 form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(lSize)*Protection_level, family=gaussian)
 #backward deletion - removed the interaction
-form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + Protection_level, family=gaussian)
-# backward deletion -  removed years
-form1 = bf(lCost_km ~ scale(lSize) + Protection_level, family=gaussian)
+form1 = bf(lCost_km ~ scale(lSize) + scale(lSize)*Protection_level, family=gaussian)
+# model with size only
+#backward deletion - removed the interaction
+form1 = bf(lCost_km ~ scale(lSize), family=gaussian)
 # running the model with priors only
 esubs.brm1 = brm(form1, 
                data=esubs, 
@@ -276,12 +277,13 @@ esubs.brm1 |>
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   summarise_draws(
-    median= median, 
+    median = median, 
     hdi = ~HDInterval::hdi(.x),
     rhat, 
     ess_bulk,
-    Pl=~mean(.x<0), 
-    Pg=~mean(.x>0))
+    Pl = ~mean(.x<0), 
+    Pg = ~mean(.x>0), 
+    se = ~sd(.x))
 
 #the amount of variability explained by the model -quasi R squared
 esubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
@@ -546,6 +548,8 @@ form = bf(lCost_km ~ scale(lSize) + scale(GDP_pc) + scale(lSize)*Protection_leve
 form = bf(lCost_km ~ scale(lSize) + scale(GDP_pc) + Protection_level, family=gaussian)
 # backward delition - removed GDP per capita
 form = bf(lCost_km ~ scale(lSize) + Protection_level, family=gaussian)
+# backward deletion - removed protection level 
+form = bf(lCost_km ~ scale(lSize), family=gaussian)
 
 # running the model with priors only
 msubs.brm1 = brm(form, 
@@ -642,8 +646,9 @@ msubs.brm1 |>
                   hdi = ~HDInterval::hdi(.x),
                   rhat, 
                   ess_bulk,
-                  Pl=~mean(.x<0), 
-                  Pg=~mean(.x>0))
+                  Pl = ~mean(.x<0), 
+                  Pg = ~mean(.x>0),
+                  se = ~sd(.x))   # calculate teh standard error
 
 #the amount of variability explained by the model -quasi R squared
 msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()

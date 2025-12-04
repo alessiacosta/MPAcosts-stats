@@ -129,14 +129,10 @@ dev.off()
 ```{r}
 # setting the model formula
 formGDP = bf(lCost_km ~ scale(GDP_pc), family=gaussian)
-# setting my priors
-priors = prior(normal(11, 1.8), class='Intercept') +
-  prior(normal(0,1.8), class='b')
 # running the model with priors only
 GDP.brm1 = brm(formGDP, 
-               data=esubs, 
-               prior=priors,
-               sample_prior='only', 
+               data=esubs,
+               sample_prior='yes', 
                iter= 5000, 
                warmup = 1000, 
                chains=3, 
@@ -146,14 +142,12 @@ GDP.brm1 = brm(formGDP,
                seed=123, 
                control = list(adapt_delta=0.99, max_treedepth=29),
                backend = "cmdstanr")
-# running the model with both priors and data
-GDP.brm2 = GDP.brm1 |> 
-  update(sample_prior = 'yes', refresh=100)
+
 # Assess priors and posteriors
-GDP.brm2 |> SUYR_prior_and_posterior()
+GDP.brm1 |> SUYR_prior_and_posterior()
 # summarising results
 #thorough results
-GDP.brm2 |> 
+GDP.brm1 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   summarise_draws(
@@ -164,7 +158,7 @@ GDP.brm2 |>
     Pl=~mean(.x<1), 
     Pg=~mean(.x>1))
 ```
-## Plottign establisxhment costs x GDP per capita
+## Plotting establisxhment costs x GDP per capita
 ```{r}
 # creating prediction dataframe
 pred_draws_GDP_e <- emmeans(

@@ -4,9 +4,46 @@ format: html
 ---
 
 ```{r}
-model1 = lm(lCost_km ~ ScaledSize + scale(Years) + ScaledSize*Protection_level, family=gaussian, data = esubs)
-summary(model1)
-model2 <- lm(lCost_km ~ scale(lSize) + scale(Years) + Protection_level, family=gaussian, data = esubs)
+model2 <- lm(lCost_km ~ scale(lSize) + scale(Years) + scale(lSize)*Protection_level, family=gaussian, data = esubs)
 summary(model2)
+exp(coef(model2))
 ```
+# Calculating the se for Balmford et al., 2004 & setting my estimate +/- se
+```{r}
+#Estimates from Balmford et al., 2004
+Estimate1 <- -0.80
+t.statistic <- -17.2
+se1 <- (Estimate/t.statistic)
+se1
+
+# Estimates from my model
+my.estimate2 <- -1.003305
+my.se2 <- 0.2829704
+
+# Calculating a t test between these two models and p-value
+t.test <- (my.estimate2 - Estimate1) / (sqrt(my.se2^2 + se1^2))
+t.test
+p.value <- 2*(1-pnorm(abs(t.test)))
+p.value
+```
+
+# Calculating the se for McCrea-Strub et al., 2011 & setting up my estimate +/- se
+```{r}
+# Estimates from McCrea-Strub et al., 2011
+Estimate.est.1 <- - 0.48
+f.stat <- 27.8
+se.est.1 <- (Estimate.est.1 / sqrt(f.stat))
+
+# Estimates from my model
+my.est.estimate2 <- -2.427630
+my.est.se2 <- 0.4300815
+
+# calculating the 
+t.test.est <- (my.est.estimate2 - Estimate.est.1) / (sqrt(my.est.se2^2 + se.est.1^2))
+t.test.est
+p.value.est <- 2*(1-pnorm(abs(t.test.est)))
+p.value.est
+```
+
+
 
