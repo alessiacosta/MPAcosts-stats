@@ -11,9 +11,10 @@ exp(coef(model2))
 # Calculating the se for Balmford et al., 2004 & setting my estimate +/- se
 ```{r}
 #Estimates from Balmford et al., 2004
-Estimate1 <- -0.80
-t.statistic <- -17.2
-se1 <- (Estimate/t.statistic)
+Estimate1_inlog10 <- -0.80
+Estimate1 = Estimate1_inlog10*log(10) 
+t.statistic <- -17.2 
+se1 <- abs(Estimate1/t.statistic)
 se1
 
 # Estimates from my model
@@ -25,14 +26,29 @@ t.test <- (my.estimate2 - Estimate1) / (sqrt(my.se2^2 + se1^2))
 t.test
 p.value <- 2*(1-pnorm(abs(t.test)))
 p.value
+
+# calculating the approximate exceeding probability for t-test using approximate normal distribution
+# Approximate ExceedP using normal CDF
+ExceedP_gt0_norm.main <- pnorm(t.test)           # P(effect > 0)
+ExceedP_lt0_norm.main <- 1 - ExceedP_gt0_norm.main   # P(effect < 0)
+
+ExceedP_gt0_norm.main
+ExceedP_lt0_norm.main
+
+# backtransformed estimate from balmford
+backtransformed_est <- exp(Estimate1)
+
 ```
 
 # Calculating the se for McCrea-Strub et al., 2011 & setting up my estimate +/- se
 ```{r}
 # Estimates from McCrea-Strub et al., 2011
-Estimate.est.1 <- - 0.48
+Estimate.est.inlog10 <- - 0.48
+Estimate.est.1 = Estimate.est.inlog10*log(10) 
+Estimate.est.1
 f.stat <- 27.8
-se.est.1 <- (Estimate.est.1 / sqrt(f.stat))
+se.est.1 <- abs(Estimate.est.1 / sqrt(f.stat))
+se.est.1
 
 # Estimates from my model
 my.est.estimate2 <- -2.427630
@@ -43,7 +59,30 @@ t.test.est <- (my.est.estimate2 - Estimate.est.1) / (sqrt(my.est.se2^2 + se.est.
 t.test.est
 p.value.est <- 2*(1-pnorm(abs(t.test.est)))
 p.value.est
+
+# calculating the approximate exceeding probability for t-test using approximate normal distribution
+ExceedP_gt0_norm <- pnorm(t.test.est)           # P(effect > 0)
+ExceedP_lt0_norm <- 1 - ExceedP_gt0_norm   # P(effect < 0)
+
+ExceedP_gt0_norm
+ExceedP_lt0_norm
+
+# # backtransformed estimate from balmford
+backtransformed.main <- exp(Estimate.est.1)
+backtransformed.main
 ```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

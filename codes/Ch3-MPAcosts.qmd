@@ -183,7 +183,6 @@ form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(lSize)*Protection_leve
 #backward deletion - removed the interaction
 form1 = bf(lCost_km ~ scale(lSize) + scale(lSize)*Protection_level, family=gaussian)
 # model with size only
-#backward deletion - removed the interaction
 form1 = bf(lCost_km ~ scale(lSize), family=gaussian)
 # running the model with priors only
 esubs.brm1 = brm(form1, 
@@ -633,8 +632,9 @@ msubs.brm1 |>
                   hdi = ~HDInterval::hdi(exp(.x)),
                   rhat, 
                   ess_bulk,
-                  Pl=~mean(.x<1), 
-                  Pg=~mean(.x>1))
+                  Pl = ~mean(.x<1), 
+                  Pg = ~mean(.x>1), 
+                  se = ~sd(exp(.x)))   # calculate teh standard error
 #Partially protected (1-0.062)*100= 93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
 # summary of draws on a log scale  - not backtransformed
@@ -743,6 +743,7 @@ dev.off()
 #### Size per each protection level - establishment
 
 ```{r}
+ymax <- 1e6
 #prediction of the establishment costs/km2 per year
 pred_draws_e <- emmeans(
   esubs.brm1,
@@ -784,8 +785,8 @@ nesize_pl <-
   scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   # Scientific notation for y-axis
   scale_y_continuous(
-    labels = scales::label_number(), 
-    limits=c(0, 1.e06)) +
+    labels = scales::label_number()) +
+  coord_cartesian(ylim = c(0, 1e6), clip = "on") +  # zoom without dropping rows
  scale_x_continuous(
    trans = "log",  # this makes the x axis on a ln scale
    breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),  # tick positions in original scale
@@ -805,8 +806,12 @@ nesize_pl <-
     color = "Degree of Protection",
     fill = "Degree of Protection", 
     title = " ") +
-  coord_cartesian(clip="off") +
-  annotate("text", x=1, y=Inf, label="A", hjust=4.3, vjust=0.4, size=5, fontface="bold", family='serif')
+ labs(tag = "A") +
+  theme(
+    plot.tag = element_text(family = "serif", face = "bold", size = 14,
+                            hjust = 0, vjust = 1),
+    plot.tag.position = c(0.15, 0.96),  # normalized plot coords [0..1]
+    plot.margin = margin(10, 10, 10, 20)) # give the tag some room
 nesize_pl
 #inset plot with transformed axis
 lesize_pl = 
@@ -857,7 +862,7 @@ tot_e <- nesize_pl +
 ```{r}
 #prediction of the maintenance costs/km2 per year
 pred_draws_m <- emmeans(
-  msubs.brm2,
+  msubs.brm1,
   ~ lSize | Protection_level,
   at = list(
     lSize = seq(min(msubs$lSize), max(msubs$lSize), length.out = 100),
@@ -985,7 +990,7 @@ dev.off()
 msubs <- msubs |> 
   filter(!is.na(GDP_pc))
 pred_draws_GDP <- emmeans(
-  msubs.brm2,
+  msubs.brm1,
   ~ GDP_pc,
   at = list(
    GDP_pc = seq(min(msubs$GDP_pc), max(msubs$GDP_pc), length.out = 100),
@@ -1018,13 +1023,13 @@ neGDP_pc <-
       labels = label_number(),
       limits = c(0, 175000)) +
     scale_x_continuous(
-      labels = label_number(scale = 1e-3)) +
+      labels = label_number(scale = 1e-3),
+      limits = c(0, 80000)) +
     theme_bw() +
     theme(text = element_text(family = "serif"),   
           #panel.grid.minor = element_blank(), 
           #panel.grid.major=element_blank()) +
-          panel.border = element_rect(color = "black", fill = NA, linewidth = 0.2)
-          ) +
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 0.2)) +
     labs(
       x = "GDP per capita (thousand US$)",
       y = "Estimated maintenance costs (US$/km² p.a.)", 
@@ -1045,11 +1050,12 @@ leGDP_pc <-
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
   scale_y_log10(
-    limits = c(1, 1e06),
+    limits = c(1, 1e07),
     labels = label_log()
   ) +
   scale_x_continuous(
-    labels = label_number(scale = 1e-3))
+    labels = label_number(scale = 1e-3),
+    limits = c(0, 80000))
   
 png("../Results/maintenance GDP.png", width = 1500, height = 1200, res = 300) 
 GDP <- 

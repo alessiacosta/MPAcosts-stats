@@ -19,7 +19,7 @@ esubs <- esubs |>
   filter(!is.na(Years)) 
 
 pred_draws1 <- emmeans(
-  esubs.brm2,
+  esubs.brm1,
   ~ Years | Protection_level,
   at = list(
     Years = seq(min(esubs$Years), max(esubs$Years), length.out = 100),
@@ -58,9 +58,14 @@ neyear_pl <-
   scale_color_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   # Scientific notation for y-axis
-  scale_y_continuous(
-    labels = scales::label_number(), 
-                     limits=c(0, 2e06)) +
+  #scale_y_continuous(
+    #labels = scales::label_number(), 
+                     #limits=c(0, 1e06)) +
+scale_y_continuous(
+  labels = scales::label_number()
+  # remove limits= here
+) +
+coord_cartesian(ylim = c(0, 1e6), clip = "on") +  # zoom without dropping rows
   # Apply theme
   theme_bw() +
   theme(text = element_text(family = "serif"), 
@@ -79,8 +84,7 @@ neyear_pl <-
     x = "Establishment phase (years)",
     y = "Estimated establishment costs (US$/km²)",
     color = "Degree of Protection",
-    fill = "Degree of Protection") +
-  coord_cartesian(clip="off")
+    fill = "Degree of Protection")
 
 # Creating inset plot with log10 scale for the y axis
 leyear_pl = 
@@ -162,7 +166,7 @@ GDP.brm1 |>
 ```{r}
 # creating prediction dataframe
 pred_draws_GDP_e <- emmeans(
-  GDP.brm2,
+  GDP.brm1,
   ~ GDP_pc,
   at = list(
     GDP_pc = seq(min(esubs$GDP_pc), max(esubs$GDP_pc), length.out = 100)
@@ -189,9 +193,11 @@ GDP_base <-
     geom_line(size = 0.8) +
     geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
     scale_y_continuous(
-      labels = scales::label_number()) +
+      labels = scales::label_number(),
+      limits = c(0, 175000)) +
     scale_x_continuous(
-      labels = scales::label_number(scale = 1e-3)) +
+      labels = scales::label_number(scale = 1e-3),
+      limits = c(0, 80000)) +
     theme_bw() +
     theme(text = element_text(family = "serif"),
           panel.border = element_rect(color = "black", fill = NA, linewidth = 0.2)
@@ -218,11 +224,12 @@ GDP_inset <-
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
   scale_y_log10(
-    limits = c(1, 1e06),
+    limits = c(1, 1e07),
     labels = scales::label_log()
   ) +
   scale_x_continuous(
-    labels = scales::label_number(scale = 1e-3))
+    labels = scales::label_number(scale = 1e-3),
+    limits = c(0, 80000))
 GDP_inset
 # combining base and inset plot for establishment
 est_GDP <- 
