@@ -164,12 +164,12 @@ GDP.brm1 |>
 ```
 ## Plotting establisxhment costs x GDP per capita
 ```{r}
-# creating prediction dataframe
+# getting the predicted draws
 pred_draws_GDP_e <- emmeans(
   GDP.brm1,
   ~ GDP_pc,
-  at = list(
-    GDP_pc = seq(min(esubs$GDP_pc), max(esubs$GDP_pc), length.out = 100)
+  at = list(GDP_pc = newGDPseq
+    #GDP_pc = seq(min(esubs$GDP_pc), max(esubs$GDP_pc), length.out = 100)
   )) |>
   gather_emmeans_draws() |>
   mutate(.value = exp(.value))  # back-transform from log the response variable --> Cost_km
@@ -194,7 +194,7 @@ GDP_base <-
     geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
     scale_y_continuous(
       labels = scales::label_number(),
-      limits = c(0, 175000)) +
+      limits = c(0, 200000)) +
     scale_x_continuous(
       labels = scales::label_number(scale = 1e-3),
       limits = c(0, 80000)) +
@@ -246,7 +246,7 @@ total_GDP <-
 png("../Results/Figure GDP.png", width = 2500, height = 1600, res = 300)
 total_GDP
 dev.off()
-  
+ View(esubs) 
 ```
 
 

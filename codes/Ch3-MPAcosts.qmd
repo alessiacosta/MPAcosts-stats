@@ -49,14 +49,17 @@ source('helperFunctions.R')
 ```{r}
 #upload the right data
 fig1 <- read_csv("../Data/fig.1.csv")
+# Get world map data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+# Load the coastline data from rnaturalearth
+coastline_data <- ne_coastline(scale = "medium", returnclass = "sf")
+# importing taffied data fro requency map
+frequency <- read_csv("../Data/coord.frequency.csv")
 ```
 
 ## Making global map with my data
 
 ```{r}
-# Get world map data
-world <- ne_countries(scale = "medium", returnclass = "sf")
-
 png("../Results/Map1.png", width = 2500, height = 2000, res = 150)
 # Create the world map
 # Load the coastline data from rnaturalearth
@@ -83,6 +86,62 @@ ggplot() +
     panel.grid = element_blank())
 dev.off()
 
+```
+
+## Figure 2 - color coded by degree of protection
+```{r}
+# Tally of entries for each country 
+fig1_tally <- fig1 |> 
+  group_by(Country) |> 
+  tally() |> 
+  arrange(desc(n)) |> 
+  mutate(official_name = as.character(Country))
+#View(fig1_tally)
+# Combined in one plot 
+combined2 <- 
+  ggplot() +
+  # Plot countries in a very light grey
+  geom_sf(data = world, fill = "grey95", color = "black", size = 0.3) +  
+  # Overlay the coastline in black
+  geom_sf(data = coastline_data, color = "black", fill = NA) +  
+  geom_point(data =fig1, aes(x =Longitude, y=Latitude, size = Size, fill = Protection_level, color = Protection_level), 
+             shape = 21, # shape that has the circle and border
+             #color = "black", # color of the border
+             stroke = 0.9, # thickness of the border
+             alpha = 0.7) +
+  # Set coordinate system
+  coord_sf() +  
+  # Adjust theme
+  theme_minimal() +  
+  theme(  
+    text = element_text(family = "serif"),  # Set font to serif
+    axis.text = element_text(size = 24),  
+    axis.title = element_blank(),  # Removes axis titles  
+    axis.line.x = element_line(color = "black", size = 0.5),  
+    axis.line.y = element_line(color = "black", size = 0.5),  
+    axis.ticks = element_line(color = "black", size = 0.5),  
+    panel.grid = element_blank(), 
+    legend.title = element_text(size = 20), 
+    legend.text = element_text(size = 16)) + # set the size of the text of the legend items
+  scale_size_continuous(range = c(6, 25), 
+                        limits = c(min(fig1$Size), max(fig1$Size)),  # select meaningful sizes for legend
+                        breaks = c(1, 100000, 990000), # set the specific bubble sizes shown in the legend
+                        labels = comma) + # add a comma to mark thousands in the bubles in teh legend
+  labs(size = "MPA Size (km²)", color = "Degree of protection", fill = "Degree of protection") + # Rename the legend title to "MPA size"
+  scale_fill_manual(
+    values = c(
+      "Fully protected area" = "#0072B2", 
+      "Multi-use area" = "#E69F00")) + 
+  scale_color_manual(    # changing the color of the borders for the two different categories
+    values = c(
+      "Fully protected area" = "#004C7A", 
+      "Multi-use area" = "#B37400")) + 
+  guides(color = guide_legend( override.aes = list(size=8)),  # increase the size of the legend points for protection level 
+         size = guide_legend(override.aes = list(fill = "black")))  # manually changing for MPA size bubbles
+# exporting the plot as a png
+png("../Results/Combined2.png", width = 2500, height = 2300, res = 150)
+combined2
+dev.off()  
 ```
 
 # Statistics
@@ -574,7 +633,7 @@ msubs.brm1 |>
 #Assess priors and posteriors
 msubs.brm1 |> SUYR_prior_and_posterior() # this does not run because i hano intercept in the model 
 #Produce the same conditional plot but with the posteriors
-msubs.brm2 |>
+msubs.brm1 |>
   conditional_effects() |> 
   plot(points=TRUE) |> 
   wrap_plots() # jitter gdp per capita and lsize
@@ -622,7 +681,7 @@ plotResiduals(msubs.resids, quantreg = TRUE)
 
 ```{r}
 # generic summary 
-msubs.brm2 |> summary()
+msubs.brm1 |> summary()
 
 #thorough results
 msubs.brm1 |> 
@@ -743,7 +802,6 @@ dev.off()
 #### Size per each protection level - establishment
 
 ```{r}
-ymax <- 1e6
 #prediction of the establishment costs/km2 per year
 pred_draws_e <- emmeans(
   esubs.brm1,
@@ -833,9 +891,9 @@ lesize_pl =
     labels = scales::label_log(), 
                 limits = c(1e0, 1.0e+07)) +
  scale_x_continuous(
-      trans = "log",  # this makes the x axis on a ln scale
+     trans = "log",  # this makes the x axis on a ln scale
       breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
-       labels = scales::label_log()) + 
+      labels = scales::label_log()) +
   theme_bw() +
   theme(text = element_text(family = "serif", size=7),
          axis.title = element_blank(),
@@ -913,7 +971,8 @@ nmsize_pl =
   scale_x_continuous(
     trans = "log",  # this makes the x axis on a ln scale
       breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
-       labels = scales::label_log()) + 
+       labels = scales::label_log(), 
+    limits = c(1e0, 1.0e+06)) + 
   # Apply theme
   theme_bw() +
   theme(text = element_text(family = "serif"),
@@ -928,11 +987,11 @@ nmsize_pl =
     fill = "Degree of protection", 
     title = " ") +
   coord_cartesian(clip="off") +
-  annotate("text", x=1, y=Inf, label="B", hjust=5.5, vjust=0.4, size=5, fontface="bold", family='serif')
+  annotate("text", x=1, y=Inf, label="B", hjust=2.8, vjust=0.4, size=5, fontface="bold", family='serif')
 nmsize_pl
 
 # plotting with an inset with log10 y axis 
-lmsize_pl = 
+lmsize_pl <- 
   ggplot() +
   geom_line(data = fp, aes(x = Size, y = median), color = "#0072B2", size = 0.8) +
   geom_line(data = mubs, aes(x = Size, y = median), color = "#E69F00", size = 0.8) +
@@ -953,7 +1012,8 @@ lmsize_pl =
   scale_x_continuous(
    trans = "log",  # this makes the x axis on a ln scale
       breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
-       labels = scales::label_log()) + 
+       labels = scales::label_log(), 
+   limits = c(1e0, 1.0e+06)) + 
   theme_bw() +
   theme(text = element_text(family = "serif", size=7), 
         axis.title = element_blank(),
@@ -1021,7 +1081,7 @@ neGDP_pc <-
     geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
     scale_y_continuous(
       labels = label_number(),
-      limits = c(0, 175000)) +
+      limits = c(0, 200000)) +
     scale_x_continuous(
       labels = label_number(scale = 1e-3),
       limits = c(0, 80000)) +
@@ -1054,10 +1114,11 @@ leGDP_pc <-
     labels = label_log()
   ) +
   scale_x_continuous(
-    labels = label_number(scale = 1e-3),
+    labels = label_number(scale = 1e-3), 
     limits = c(0, 80000))
-  
-png("../Results/maintenance GDP.png", width = 1500, height = 1200, res = 300) 
+lmsize_pl
+
+#png("../Results/maintenance GDP.png", width = 1500, height = 1200, res = 300) 
 GDP <- 
   neGDP_pc +
   inset_element(
@@ -1066,5 +1127,5 @@ GDP <-
     bottom = 0.45,
     right = 0.7,
     top = 0.98)
-dev.off()
+#dev.off()
 ```
