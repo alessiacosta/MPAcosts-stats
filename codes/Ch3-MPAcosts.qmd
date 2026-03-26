@@ -2,8 +2,7 @@
 title: "Ch3-MPAcosts"
 ---
 
-# Loading packages needed for the project
-
+# Library
 ```{r}
 library(readr)
 library(ggplot2)
@@ -88,7 +87,7 @@ dev.off()
 
 ```
 
-## Figure 2 - color coded by degree of protection
+## Figure 1 - color coded by degree of protection
 ```{r}
 # Tally of entries for each country 
 fig1_tally <- fig1 |> 
@@ -256,7 +255,8 @@ esubs.brm1 = brm(form1,
                seed=123, 
                control = list(adapt_delta=0.99, max_treedepth=29),
                backend = "cmdstanr")
-
+# saving the model 
+saveRDS(esubs.brm1, "esubs_brm1.rds")
 #making a conditional plot on a better scale 
 esubs.brm1 |>
   conditional_effects() |> 
