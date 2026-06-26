@@ -1077,8 +1077,8 @@ pred_GDP <- pred_draws_GDP |>
 #untransformed axis
 neGDP_pc <- 
   ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
-    geom_line(size = 0.8, linetype = "dashed") +
-    geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+    geom_line(size = 0.8, linetype = "dashed", color = "#1B5E20") +
+    geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#3A6B3A", alpha = 0.2, color = NA) +
     scale_y_continuous(
       labels = label_number(),
       limits = c(0, 200000)) +
@@ -1101,9 +1101,9 @@ neGDP_pc
 # transformed axis  
 leGDP_pc <- 
  ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
-  geom_line(size = 0.8, linetype = "dashed") +  # thinner line
-  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  geom_point(data=msubs, aes(x=GDP_pc, y=Cost_km)) +
+  geom_line(size = 0.8, linetype = "dashed", color = "#1B5E20") +  # thinner line
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#3A6B3A", alpha = 0.2, color = NA) +
+  geom_point(data = msubs, aes(x = GDP_pc, y = Cost_km), color = "#1B5E20") +
   theme_bw() +
   theme(text = element_text(family = "serif"),
         axis.title = element_blank(), 
@@ -1126,6 +1126,6 @@ GDP <-
     left = 0.05, 
     bottom = 0.45,
     right = 0.7,
-    top = 0.98)
+    top = 0.98)6
 #dev.off()
 ```

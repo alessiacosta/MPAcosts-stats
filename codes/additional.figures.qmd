@@ -129,7 +129,9 @@ dev.off()
     # caption = "Establishment phase (years)")
 
 ```
-# plotting GDP per capita vs establishment costs 
+
+# plotting GDP per capita vs establishment costs
+
 ```{r}
 # setting the model formula
 formGDP = bf(lCost_km ~ scale(GDP_pc), family=gaussian)
@@ -162,7 +164,9 @@ GDP.brm1 |>
     Pl=~mean(.x<1), 
     Pg=~mean(.x>1))
 ```
+
 ## Plotting establisxhment costs x GDP per capita
+
 ```{r}
 # getting the predicted draws
 pred_draws_GDP_e <- emmeans(
@@ -190,8 +194,8 @@ pred_GDP_e <- pred_draws_GDP_e |>
 # creating the base plot
 GDP_base <- 
   ggplot(pred_GDP_e, aes(x = GDP_pc, y = response)) +
-    geom_line(size = 0.8) +
-    geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
+    geom_line(size = 0.8, color = "#8C1D40") +
+    geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#800020", alpha = 0.2, color = NA) +
     scale_y_continuous(
       labels = scales::label_number(),
       limits = c(0, 200000)) +
@@ -215,9 +219,9 @@ GDP_base
 # creating the inset plot with log10 scale for the y axis
 GDP_inset <-
  ggplot(pred_GDP_e, aes(x = GDP_pc, y = response)) +
-  geom_line(size = 0.8) +  # thinner line
-  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
-  geom_point(data=msubs, aes(x=GDP_pc, y=Cost_km)) +
+  geom_line(size = 0.8, color = "#8C1D40") +  # thinner line
+  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#800020", alpha = 0.2, color = NA) +
+  geom_point(data = msubs, aes(x = GDP_pc, y = Cost_km), color = "#8C1D40") +
   theme_bw() +
   theme(text = element_text(family = "serif"), 
         axis.title = element_blank(),
@@ -246,15 +250,4 @@ total_GDP <-
 png("../Results/Figure GDP.png", width = 2500, height = 1600, res = 300)
 total_GDP
 dev.off()
- View(esubs) 
 ```
-
-
-
-
-
-
-
-
-
-
