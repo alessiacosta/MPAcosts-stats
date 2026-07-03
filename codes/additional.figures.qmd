@@ -239,7 +239,7 @@ GDP_inset
 est_GDP <- 
   GDP_base + inset_element(
     GDP_inset,
-    left = 0.3, # 25% distance from the left  
+    left = 0.3, # 30% distance from the left  
     bottom = 0.45, # 45% distance from the bottom
     right = 0.95, 
     top = 0.98)
