@@ -237,11 +237,11 @@ esubs <- esubs |>
 #summary(esubs)
 #form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
 #correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
-form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(lSize)*Protection_level, family=gaussian)
+form1 = bf(lCost_km ~ lSize + Years + lSize*Protection_level, family=gaussian)
 #backward deletion - removed the interaction
-form1 = bf(lCost_km ~ scale(lSize) + scale(lSize)*Protection_level, family=gaussian)
+form1 = bf(lCost_km ~ lSize + Years + Protection_level, family=gaussian)
 # model with size only
-form1 = bf(lCost_km ~ scale(lSize), family=gaussian)
+form1 = bf(lCost_km ~ lSize, family=gaussian)
 # running the model with priors only
 esubs.brm1 = brm(form1, 
                data=esubs, 
@@ -316,19 +316,18 @@ plotResiduals(esubs.resids, quantreg = TRUE)
 # generic summary 
 esubs.brm1 |> summary() 
 
-#thorough results
 esubs.brm1 |> 
-  as_draws_df() |>  
-  dplyr::select(matches("^b_.*")) |> 
+  as_draws_df() |>
+    exp() |>
+    dplyr::select(matches("^b_.*")) |> 
   summarise_draws(
-    median=~exp(median(.x)), 
-    hdi = ~HDInterval::hdi(exp(.x)),
-    rhat, 
+    median,
+    HDInterval::hdi,
+    Pl = ~mean(.x < 1),
+    Pg = ~mean(.x > 1),
+    rhat,
     ess_bulk,
-    Pl=~mean(.x<1), 
-    Pg=~mean(.x>1))
-
-#Paritally protected (0.062-1)*100= -93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
+    ess_tail) 
 
 # untransformed results
 esubs.brm1 |> 
@@ -444,7 +443,7 @@ esubs <- esubs |>
 
 pred_draws1 <- emmeans(
   # This is the fitted Bayesian model object, likely of class 'brmsfit' (e.g., from the 'brms' package)
-  esubs.brm2,
+  esubs.brm1,
   # This formula specifies that we want to compute marginal means over the variable 'Years'
   ~ Years,
   # This 'at' argument defines the values of the predictors at which to compute the EMMs
@@ -601,13 +600,11 @@ msubs<- msubs |>
   mutate(lSize=log(Size))
 #model formula 
 #by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
-form = bf(lCost_km ~ scale(lSize) + scale(GDP_pc) + scale(lSize)*Protection_level, family=gaussian)
-# backward deletion -  removed the interaction
-form = bf(lCost_km ~ scale(lSize) + scale(GDP_pc) + Protection_level, family=gaussian)
-# backward delition - removed GDP per capita
-form = bf(lCost_km ~ scale(lSize) + Protection_level, family=gaussian)
+form = bf(lCost_km ~ lSize + GDP_pc + lSize*Protection_level, family=gaussian)
+# backward deletion -  removed the GDP per capita
+form = bf(lCost_km ~ lSize + lSize*Protection_level, family=gaussian)
 # backward deletion - removed protection level 
-form = bf(lCost_km ~ scale(lSize), family=gaussian)
+form = bf(lCost_km ~ lSize, family=gaussian)
 
 # running the model with priors only
 msubs.brm1 = brm(form, 
@@ -643,19 +640,19 @@ msubs.brm1 |>
 
 ```{r}
 #trace plot 
-msubs.brm2$fit |> stan_trace()
+msubs.brm1$fit |> stan_trace()
 
 #border correlarion
-msubs.brm2$fit |> stan_ac()
+msubs.brm1$fit |> stan_ac()
 
 #chain convergence
-msubs.brm2$fit |> stan_rhat()
+msubs.brm1$fit |> stan_rhat()
 
 #effective sample size
-msubs.brm2$fit |> stan_ess() # there are no issues here
+msubs.brm1$fit |> stan_ess() # there are no issues here
 
 #check the densities
-msubs.brm2$fit |> stan_dens(separate_chains=TRUE)
+msubs.brm1$fit |> stan_dens(separate_chains=TRUE)
 #this plot is good if we have high hats 
 ```
 
@@ -663,11 +660,11 @@ msubs.brm2$fit |> stan_dens(separate_chains=TRUE)
 
 ```{r}
 #probability check
-msubs.brm2 |> pp_check(type='dens_overlay', ndraws=100) 
+msubs.brm1 |> pp_check(type='dens_overlay', ndraws=100) 
 #not the best fit it could be 
 
 #sim residuals 
-msubs.resids  = make_brms_dharma_res(msubs.brm2, integerResponse= TRUE)
+msubs.resids  = make_brms_dharma_res(msubs.brm1, integerResponse= TRUE)
 testUniformity(msubs.resids)
 #simulated residuals are not too bad, acceptable
 
@@ -685,15 +682,18 @@ msubs.brm1 |> summary()
 
 #thorough results
 msubs.brm1 |> 
-  as_draws_df() |>  
-  dplyr::select(matches("^b_.*")) |> 
-  summarise_draws(median=~exp(median(.x)), 
-                  hdi = ~HDInterval::hdi(exp(.x)),
-                  rhat, 
-                  ess_bulk,
-                  Pl = ~mean(.x<1), 
-                  Pg = ~mean(.x>1), 
-                  se = ~sd(exp(.x)))   # calculate teh standard error
+    as_draws_df() |>
+    exp() |>
+    dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median,
+    HDInterval::hdi,
+    Pl = ~mean(.x < 1),
+    Pg = ~mean(.x > 1),
+    rhat,
+    ess_bulk,
+    ess_tail, 
+    se)   # calculate teh standard error
 #Partially protected (1-0.062)*100= 93% decresase in cost_km in partially protected areas than in fully protected areas, and we have strong evidence because we look a Pl for evidence- 99%
 
 # summary of draws on a log scale  - not backtransformed
@@ -701,7 +701,7 @@ msubs.brm1 |>
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   summarise_draws(
-    median=median, 
+    median = median, 
                   hdi = ~HDInterval::hdi(.x),
                   rhat, 
                   ess_bulk,
@@ -719,7 +719,7 @@ msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
 ```{r}
 #prediction of the maintenance costs/km2 per year
 pred_draws_m <- emmeans(
-  msubs.brm2,
+  msubs.brm1,
   ~ lSize,
   at = list(
     lSize = seq(min(msubs$lSize), max(msubs$lSize), length.out = 100),
@@ -786,6 +786,8 @@ msize =
 dev.off()
 
 ```
+
+
 
 ## Summary plots
 
@@ -1077,7 +1079,7 @@ pred_GDP <- pred_draws_GDP |>
 #untransformed axis
 neGDP_pc <- 
   ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
-    geom_line(size = 0.8, linetype = "dashed", color = "#8C1D40") +
+    geom_line(size = 0.8, linetype = "dotted", color = "#8C1D40") +
     geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#800020", alpha = 0.2, color = NA) +
     scale_y_continuous(
       labels = label_number(),
@@ -1101,7 +1103,7 @@ neGDP_pc
 # transformed axis  
 leGDP_pc <- 
  ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
-  geom_line(size = 0.8, linetype = "dashed", color = "#8C1D40") +  # thinner line
+  geom_line(size = 0.8, linetype = "dotted", color = "#8C1D40") +  # thinner line
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#800020", alpha = 0.2, color = NA) +
   geom_point(data = msubs, aes(x = GDP_pc, y = Cost_km), color = "#8C1D40") +
   theme_bw() +
@@ -1129,3 +1131,43 @@ GDP <-
     top = 0.98)
 #dev.off()
 ```
+
+
+
+
+
+
+
+```{r}
+  ggplot() +
+  # Fully protected areas
+  geom_line(data = fpe, aes(x = lSize, y = median, color = "Fully protected areas"), size = 0.8) +
+  geom_ribbon(data = fpe, aes(x = lSize, ymin = lower.HPD, ymax = upper.HPD, fill = "Fully protected areas"), alpha = 0.2) +
+  # Partially protected areas
+  geom_line(data = mubse, aes(x = Size, y = median, color = "Multi-use areas"), size = 0.8) +
+  geom_ribbon(data = mubse, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD, fill = "Multi-use areas"), alpha = 0.2) +
+  # Customize scales
+  scale_color_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
+  scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
+  # Apply theme
+  theme_bw() +
+  theme(text = element_text(family = "serif"),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 0.2),
+        #panel.grid.major = element_blank(),
+        #panel.grid.minor = element_blank(), 
+        legend.position = "none") +
+  # Labels
+  labs(
+    x = "Size (km²)",
+    y = "Estimated establishment costs (US$/km²)",
+    color = "Degree of Protection",
+    fill = "Degree of Protection", 
+    title = " ") +
+ labs(tag = "A") +
+  theme(
+    plot.tag = element_text(family = "serif", face = "bold", size = 14,
+                            hjust = 0, vjust = 1),
+    plot.tag.position = c(0.15, 0.96),  # normalized plot coords [0..1]
+    plot.margin = margin(10, 10, 10, 20))
+```
+

@@ -134,7 +134,8 @@ dev.off()
 
 ```{r}
 # setting the model formula
-formGDP = bf(lCost_km ~ scale(GDP_pc), family=gaussian)
+formGDP = bf(lCost_km ~ GDP_pc, family=gaussian)
+model_gdp = lm(lCost_km ~ GDP_pc, family=gaussian, data = )
 # running the model with priors only
 GDP.brm1 = brm(formGDP, 
                data=esubs,
@@ -157,17 +158,23 @@ GDP.brm1 |>
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   summarise_draws(
-    median=~exp(median(.x)), 
-    hdi = ~HDInterval::hdi(exp(.x)),
-    rhat, 
-    ess_bulk,
-    Pl=~mean(.x<1), 
-    Pg=~mean(.x>1))
+    median=median, 
+                  hdi = ~HDInterval::hdi(.x),
+                  rhat, 
+                  ess_bulk,
+                  Pl = ~mean(.x<0), 
+                  Pg = ~mean(.x>0),
+                  se = ~sd(.x))
 ```
 
 ## Plotting establisxhment costs x GDP per capita
 
 ```{r}
+esubs <- esubs |> 
+  filter(!is.na(GDP_pc))
+newGDPseq <- seq(min(esubs$GDP_pc),
+                 max(esubs$GDP_pc),
+                 length.out = 100)
 # getting the predicted draws
 pred_draws_GDP_e <- emmeans(
   GDP.brm1,
