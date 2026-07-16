@@ -102,9 +102,11 @@ leyear_pl =
     labels = c("Fully protected" = "Fully protected areas",
                "Partially protected" = "Multi-use areas")
   ) +
-  scale_y_log10(
-    labels = scales::label_log(), 
-                limits = c(1e0, 1.0e+07)) +
+  scale_y_continuous(
+    trans = scales::pseudo_log_trans(base = 10),
+    breaks = c(10, 1000, 100000, 10000000),
+    labels = scales::label_log(),
+    limits = c(0, 1e7)) +
   theme_bw() +
   theme(text = element_text(family = "serif", size=10),
          axis.title = element_blank(),
@@ -234,10 +236,11 @@ GDP_inset <-
         axis.title = element_blank(),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
-  scale_y_log10(
-    limits = c(1, 1e07),
-    labels = scales::label_log()
-  ) +
+  scale_y_continuous(
+    trans = scales::pseudo_log_trans(base = 10),
+    breaks = c(10, 1000, 100000, 10000000),
+    labels = scales::label_log(),
+    limits = c(0, 1e7)) +
   scale_x_continuous(
     labels = scales::label_number(scale = 1e-3),
     limits = c(0, 80000))

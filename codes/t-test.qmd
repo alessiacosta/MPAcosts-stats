@@ -4,10 +4,10 @@ format: html
 ---
 
 ```{r}
-model2 <- lm(lCost_km ~ lSize + Years + lSize*Protection_level, family=gaussian, data = esubs)
+model2 <- lm(log10(Cost_km) ~ log10(Size), family=gaussian, data = esubs)
 summary(model2)
 
-model_m = lm(lCost_km ~ lSize + GDP_pc + lSize*Protection_level, family=gaussian, data = msubs)
+model_m = lm(log10(Cost_km) ~ log10(Size), family=gaussian, data = msubs)
 summary(model_m)
 ```
 
@@ -15,8 +15,7 @@ summary(model_m)
 
 ```{r}
 #Estimates from Balmford et al., 2004
-Estimate1_inlog10 <- -0.80
-Estimate1 <- Estimate1_inlog10*log(10) # converting to ln 
+Estimate1 <- -0.80
 t.statistic <- -17.2 
 se1 <- abs(Estimate1/t.statistic)
 se1
@@ -48,8 +47,7 @@ backtransformed_est <- exp(Estimate1)
 
 ```{r}
 # Estimates from McCrea-Strub et al., 2011
-Estimate.est.inlog10 <- - 0.48
-Estimate.est.1 = Estimate.est.inlog10*log(10) # converting to ln 
+Estimate.est.1 <- - 0.48
 Estimate.est.1
 f.stat <- 27.8
 se.est.1 <- abs(Estimate.est.1 / sqrt(f.stat))
