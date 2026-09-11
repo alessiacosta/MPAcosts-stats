@@ -244,9 +244,9 @@ form1 = bf(Cost_km ~ lSize + Years + Protection_level, family = lognormal)
 form1 = bf(lCost_km ~ lSize, family = lognormal)
 # running the model with priors only
 esubs.brm1 = brm(form1, 
-               data=esubs, 
-               sample_prior='yes', 
-               iter= 5000, 
+               data = esubs, 
+               sample_prior ='yes', 
+               iter = 5000, 
                warmup = 1000, 
                chains = 3, 
                cores = 3, 
@@ -600,24 +600,24 @@ msubs<- msubs |>
   mutate(lSize=log(Size))
 #model formula 
 #by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
-form = bf(lCost_km ~ lSize + GDP_pc + lSize*Protection_level, family=gaussian)
+form = bf(Cost_km ~ lSize + GDP_pc + lSize*Protection_level, family = lognormal)
 # backward deletion -  removed the GDP per capita
-form = bf(lCost_km ~ lSize + lSize*Protection_level, family=gaussian)
+form = bf(Cost_km ~ lSize + lSize*Protection_level, family = lognormal)
 # backward deletion - removed protection level 
-form = bf(lCost_km ~ lSize, family=gaussian)
+form = bf(Cost_km ~ lSize, family = lognormal)
 
 # running the model with priors only
 msubs.brm1 = brm(form, 
-               data=msubs, 
-               sample_prior='yes', 
-               iter= 5000, 
+               data = msubs, 
+               sample_prior ='yes', 
+               iter = 5000, 
                warmup = 1000, 
-               chains=3, 
+               chains = 3, 
                cores = 3, 
-               thin=5, 
-               refresh=0, 
-               seed=123, 
-               control = list(adapt_delta=0.99, max_treedepth=15),
+               thin = 5, 
+               refresh = 0, 
+               seed = 123, 
+               control = list(adapt_delta = 0.99, max_treedepth = 15),
                backend = "cmdstanr")
 
 #making a conditional plot
@@ -660,11 +660,11 @@ msubs.brm1$fit |> stan_dens(separate_chains=TRUE)
 
 ```{r}
 #probability check
-msubs.brm1 |> pp_check(type='dens_overlay', ndraws=100) 
+msubs.brm1 |> pp_check(type = 'dens_overlay', ndraws = 100) 
 #not the best fit it could be 
 
 #sim residuals 
-msubs.resids  = make_brms_dharma_res(msubs.brm1, integerResponse= TRUE)
+msubs.resids = make_brms_dharma_res(msubs.brm1, integerResponse= TRUE)
 testUniformity(msubs.resids)
 #simulated residuals are not too bad, acceptable
 
@@ -710,7 +710,7 @@ msubs.brm1 |>
                   se = ~sd(.x))   # calculate teh standard error
 
 #the amount of variability explained by the model -quasi R squared
-msubs.brm2 |> bayes_R2(summary=FALSE) |> median_hdci()
+msubs.brm2 |> bayes_R2(summary = FALSE) |> median_hdci()
 #we are explaining 41% of the variance with this model -  which should be a pretty good fit for the model
 ```
 
@@ -742,10 +742,9 @@ pred_size2 <- pred_draws_m |>
       upper.HPD = hdi_vals[2]
     )
   })
-# export the dataset
-write_csv(pred_size2, "../Data/pred_size_m.csv")
+
 #prediction plot
-nmsize = 
+nmsize <-  
   ggplot(pred_size2, aes(x = lSize, y = median)) +
   geom_line(size = 0.8) +
   geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), alpha = 0.2, color = NA) +
