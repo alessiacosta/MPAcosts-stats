@@ -232,27 +232,27 @@ cor(esubs$lSize, esubs$GDP_pc)
 #starting setting up the model
 #model formula
 esubs <- esubs |> 
-  mutate(lSize=log(Size), 
-         lCost_km=log(Cost_km))
+  mutate(lSize = log(Size), 
+         lCost_km = log(Cost_km))
 #summary(esubs)
 #form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
 #correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
-form1 = bf(lCost_km ~ lSize + Years + lSize*Protection_level, family=gaussian)
+form1 = bf(lCost_km ~ lSize + Years + lSize*Protection_level, family = lognormal)
 #backward deletion - removed the interaction
-form1 = bf(lCost_km ~ lSize + Years + Protection_level, family=gaussian)
+form1 = bf(Cost_km ~ lSize + Years + Protection_level, family = lognormal)
 # model with size only
-form1 = bf(lCost_km ~ lSize, family=gaussian)
+form1 = bf(lCost_km ~ lSize, family = lognormal)
 # running the model with priors only
 esubs.brm1 = brm(form1, 
                data=esubs, 
                sample_prior='yes', 
-               iter= 500000, 
-               warmup = 10000, 
-               chains=3, 
+               iter= 5000, 
+               warmup = 1000, 
+               chains = 3, 
                cores = 3, 
-               thin=5, 
-               refresh=0, 
-               seed=123, 
+               thin = 5, 
+               refresh = 0, 
+               seed = 123, 
                control = list(adapt_delta=0.99, max_treedepth=29),
                backend = "cmdstanr")
 # saving the model 
@@ -295,11 +295,11 @@ esubs.brm1$fit |> stan_dens(separate_chains=TRUE)
 
 ```{r}
 #probability check
-esubs.brm2 |> pp_check(type='dens_overlay', ndraws=100)
+esubs.brm1 |> pp_check(type='dens_overlay', ndraws=100)
 #not the best fit it could be 
 
 #sim residuals 
-esubs.resids  = make_brms_dharma_res(esubs.brm2, integerResponse= TRUE)
+esubs.resids  = make_brms_dharma_res(esubs.brm1, integerResponse= TRUE)
 testUniformity(esubs.resids)
 #simulated residuals are not too bad, acceptable
 
@@ -329,7 +329,7 @@ esubs.brm1 |>
     ess_bulk,
     ess_tail) 
 
-# untransformed results
+# untransformed results - these were used in the paper
 esubs.brm1 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
@@ -547,7 +547,7 @@ summary(msubs)
 msubs$Protection_bin[msubs$Protection_level=="Fully protected"]<-1
 msubs$Protection_bin[msubs$Protection_level=="Partially protected"]<-0
 
-#making a subset for each cost class, maitenance, management, administration and enforcement 
+#making a subset for each cost class, maintenance, management, administration and enforcement 
 msubs <- msubs |>  
  subset(Cost_class %in% c("Maintenance"))
 summary(msubs) 
@@ -809,21 +809,28 @@ pred_draws_e <- emmeans(
   esubs.brm1,
   ~ lSize | Protection_level,
   at = list(
-    lSize = seq(min(esubs$lSize), max(esubs$lSize), length.out = 10),
-    Protection_level = unique(esubs$Protection_level))) |>
-  gather_emmeans_draws() |>
-  mutate(.value = exp(.value))  # back-transform from log
+    lSize = seq(min(esubs$lSize),
+                max(esubs$lSize),
+                length.out = 100),
+    Protection_level = unique(esubs$Protection_level)
+  )
+) |>
+  gather_emmeans_draws()
 
-pred_size <- pred_draws_e |> 
-  group_split(lSize, Protection_level) |> 
-  map_dfr(function(df) { 
-    lower <- quantile(df$.value, 0.025) 
-    upper <- quantile(df$.value, 0.975) 
-    tibble( 
-      lSize = unique(df$lSize), 
-      Size = exp(unique(df$lSize)), 
-      Protection_level = unique(df$Protection_level), 
-      median = median(df$.value), lower = lower, upper = upper ) })
+
+pred_size <- pred_draws_e |>
+  group_by(lSize, Protection_level) |>
+  summarise(
+    estimate = mean(.value),
+    se = sd(.value),
+    .groups = "drop"
+  ) |>
+  mutate(
+    median = exp(estimate),
+    lower = exp(estimate - 1.96 * se), # t-value = 1.96 for 95% confidence interval
+    upper = exp(estimate + 1.96 * se),
+    Size = exp(lSize)
+  )
 ```
 
 ```{r}
@@ -841,18 +848,20 @@ pred_size_e <- pred_draws_e |>
       upper.HPD = hdi_vals[2]
     )
   })
+```
 
-fpe <- subset(pred_size_e, Protection_level == "Fully protected")
-mubse <- subset(pred_size_e, Protection_level == "Partially protected")
+```{r}
+fpe <- subset(pred_size, Protection_level == "Fully protected")
+mubse <- subset(pred_size, Protection_level == "Partially protected")
 # Create the base plot
 nesize_pl <- 
   ggplot() +
   # Fully protected areas
   geom_line(data = fpe, aes(x = Size, y = median, color = "Fully protected areas"), size = 0.8) +
-  geom_ribbon(data = fpe, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD, fill = "Fully protected areas"), alpha = 0.2) +
+  geom_ribbon(data = fpe, aes(x = Size, ymin = lower, ymax = upper, fill = "Fully protected areas"), alpha = 0.2) +
   # Partially protected areas
   geom_line(data = mubse, aes(x = Size, y = median, color = "Multi-use areas"), size = 0.8) +
-  geom_ribbon(data = mubse, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD, fill = "Multi-use areas"), alpha = 0.2) +
+  geom_ribbon(data = mubse, aes(x = Size, ymin = lower, ymax = upper, fill = "Multi-use areas"), alpha = 0.2) +
   # Customize scales
   scale_color_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
   scale_fill_manual(values = c("Fully protected areas" = "#0072B2", "Multi-use areas" = "#E69F00")) +
@@ -891,9 +900,9 @@ lesize_pl <-
   ggplot() +
   geom_line(data = fpe, aes(x = Size, y = median), color = "#0072B2", size = 0.8) +
   geom_line(data = mubse, aes(x = Size, y = median), color = "#E69F00", size = 0.8) +
-  geom_ribbon(data = fpe, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD),
+  geom_ribbon(data = fpe, aes(x = Size, ymin = lower, ymax = upper),
               fill = "#0072B2", alpha = 0.2, color = NA) +
-  geom_ribbon(data = mubse, aes(x = Size, ymin = lower.HPD, ymax = upper.HPD),
+  geom_ribbon(data = mubse, aes(x = Size, ymin = lower, ymax = upper),
               fill = "#E69F00", alpha = 0.2, color = NA) +
   geom_point(data = esubs, aes(x = Size, y = Cost_km, color = Protection_level),
              show.legend = FALSE) +
