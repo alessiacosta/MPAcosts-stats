@@ -817,7 +817,6 @@ pred_draws_e <- emmeans(
 ) |>
   gather_emmeans_draws()
 
-
 pred_size <- pred_draws_e |>
   group_by(lSize, Protection_level) |>
   summarise(
@@ -831,26 +830,7 @@ pred_size <- pred_draws_e |>
     upper = exp(estimate + 1.96 * se),
     Size = exp(lSize)
   )
-```
 
-```{r}
-# Now safely summarise per lSize using purrr
-pred_size_e <- pred_draws_e |>
-  group_split(lSize, Protection_level) |>
-  map_dfr(function(df) {
-    hdi_vals <- hdi(df$.value)
-    tibble(
-      lSize     = unique(df$lSize),
-      Size      = exp(unique(df$lSize)),  # add a new variable --> back-transform size predictor
-      Protection_level = unique(df$Protection_level),
-      median    = median(df$.value),
-      lower.HPD = hdi_vals[1],
-      upper.HPD = hdi_vals[2]
-    )
-  })
-```
-
-```{r}
 fpe <- subset(pred_size, Protection_level == "Fully protected")
 mubse <- subset(pred_size, Protection_level == "Partially protected")
 # Create the base plot
@@ -955,25 +935,19 @@ pred_draws_m <- emmeans(
   gather_emmeans_draws() |>
   mutate(.value = exp(.value))  # back-transform from log
 
-# Now safely summarise per lSize using purrr
+# Now safely summarise per lSize
 pred_size2 <- pred_draws_m |>
-  group_split(lSize, Protection_level) |>
-  map_dfr(function(df) {
-    hdi_vals <- hdi(df$.value)
-    tibble(
-      lSize     = unique(df$lSize),
-      Size       = exp(unique(df$lSize)),  # add a new variable --> back-transform size predictor
-      Protection_level = unique(df$Protection_level),
-      median    = median(df$.value),
-      lower.HPD = hdi_vals[1],
-      upper.HPD = hdi_vals[2]
-    )
-  })
-#pred_size2 <- pred_size2 %>%
- # mutate(Protection_level = fct_recode(Protection_level,
-  #  "Multi-use areas" = "Partially protected",
-   # "Fully Protected Areas" = "Fully protected"
-  #))
+  group_by(lSize, Protection_level) |>
+  summarise(
+    estimate = mean(.value),
+    se = sd(.value),
+    .groups = "drop"
+  ) |>
+  mutate(
+    median = exp(estimate),
+    lower = exp(estimate - 1.96 * se), # t-value = 1.96 for 95% confidence interval
+    upper = exp(estimate + 1.96 * se),
+    Size = exp(lSize))
 
 fp <- subset(pred_size2, Protection_level == "Fully protected")
 mubs <- subset(pred_size2, Protection_level == "Partially protected")
