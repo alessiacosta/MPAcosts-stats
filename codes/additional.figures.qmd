@@ -261,3 +261,10 @@ png("../Results/Figure GDP.png", width = 2500, height = 1600, res = 300)
 total_GDP
 dev.off()
 ```
+
+# Coefficient plot
+## Establishment coefficients
+```{r}
+
+```
+
