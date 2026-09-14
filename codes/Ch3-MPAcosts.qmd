@@ -177,49 +177,49 @@ summary(multi_use)
 ```{r}
 # Data exploration to see what distribution I can use in the model
 #looking at distribution for costs/km2 divided by gdp classc
-esubs |> ggplot(aes(y=Cost_km)) +
+esubs |> ggplot(aes(y = Cost_km)) +
   geom_boxplot()
 #making an histogram 
-esubs |> ggplot(aes(x=Cost_km)) +
+esubs |> ggplot(aes(x = Cost_km)) +
   geom_histogram()
 
 #logging the data before producing the histgram 
-esubs |> ggplot(aes(x=log(Cost_km))) +
+esubs |> ggplot(aes(x = log(Cost_km))) +
   geom_histogram()
 
 #logging the axis
-esubs |> ggplot(aes(x=Cost_km)) +
+esubs |> ggplot(aes(x = Cost_km)) +
   geom_histogram() +
   scale_x_log10()
 #preferable to change the axis scale and not change the data, in case of raw data it does not make much difference
 
 #checking for linearity 
-esubs |> ggplot(aes(y=Cost_km, x=Years)) +
+esubs |> ggplot(aes(y = Cost_km, x = Years)) +
   geom_point() +
-  geom_line(aes(group=ID))
+  geom_line(aes(group = ID))
 # need this to be more clear to see what whether there are patterns
 
 #making a facet 
-esubs |> ggplot(aes(y=Cost_km, x=Years)) +
+esubs |> ggplot(aes(y = Cost_km, x = Years)) +
   geom_point() +
-  geom_smooth(method="lm") +
+  geom_smooth(method = "lm") +
   facet_wrap(~ID)
 
 #checking relationship between size and gdp
 ggplot() +
-  geom_point(data=esubs, aes(x=Size, y=Cost_km)) +
-  geom_smooth(data=esubs, aes(x=Size, y=Cost_km), method="lm") +
-  labs(x="Size (km²)", y="Establishment cost/km²")
+  geom_point(data = esubs, aes(x = Size, y = Cost_km)) +
+  geom_smooth(data = esubs, aes(x = Size, y = Cost_km), method = "lm") +
+  labs(x = "Size (km²)", y = "Establishment cost/km²")
 
 #checking distribution of mpa size
-hist(log(esubs$Size), nclass=75)
+hist(log(esubs$Size), nclass = 75)
 
 #test for correlation 
-hist(esubs$Cost_km, nclass=75)
-hist(log(esubs$Cost_km), nclass=75)
+hist(esubs$Cost_km, nclass = 75)
+hist(log(esubs$Cost_km), nclass = 75)
 #plot(esubs$lCost_km~esubs$GDP_pc)
 esubs <- esubs |>  na.omit() # removing NAs from the data
-cor(esubs$lSize, esubs$GDP_pc)
+cor(esubs$lSize, esubs$GDP_pc, method = "pearson")
 #cor(esubs$Years, esubs$GDP_pc, use = "complete.obs")
 #cor(esubs$Years, esubs$lSize, use = "complete.obs")
 #library(corrplot)
@@ -918,6 +918,7 @@ tot_e <- nesize_pl +
 #### Size per each protection level - maintenance
 
 ```{r}
+View(msubs)
 #prediction of the maintenance costs/km2 per year
 pred_draws_m <- emmeans(
   msubs.brm1,
@@ -1051,37 +1052,34 @@ pred_draws_GDP <- emmeans(
   ~ GDP_pc,
   at = list(
    GDP_pc = seq(min(msubs$GDP_pc), max(msubs$GDP_pc), length.out = 100),
-    lSize = mean(msubs$lSize, na.rm = TRUE)
-  )
-) |>
-  gather_emmeans_draws() |>
-  mutate(.value = exp(.value))  # back-transform from log
+    lSize = mean(msubs$lSize, na.rm = TRUE))) |>
+  gather_emmeans_draws()
 
 # Now safely summarise per lSize using purrr
 pred_GDP <- pred_draws_GDP |>
-  group_split(GDP_pc) |>
-  map_dfr(function(df) {
-    hdi_vals <- hdi(df$.value)
-    tibble(
-      GDP_pc     = unique(df$GDP_pc),
-      median    = median(df$.value),
-      lower.HPD = hdi_vals[1],
-      upper.HPD = hdi_vals[2]
-    )
-  })
-
+  group_by(GDP_pc) |>
+  summarise(
+    estimate = median(.value),
+    lower = quantile(.value, 0.025),
+    upper = quantile(.value, 0.975),
+    .groups = "drop"
+  ) |>
+  mutate(
+    median = exp(estimate),
+    lower = exp(lower),
+    upper = exp(upper))
 #producing a predicted ggplot
 #untransformed axis
 neGDP_pc <- 
   ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
     geom_line(size = 0.8, linetype = "dotted", color = "#8C1D40") +
-    geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#800020", alpha = 0.2, color = NA) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), fill = "#800020", alpha = 0.2, color = NA) +
     scale_y_continuous(
       labels = label_number(),
       limits = c(0, 200000)) +
     scale_x_continuous(
       labels = label_number(scale = 1e-3),
-      limits = c(0, 80000)) +
+      limits = c(0, 90000)) +
     theme_bw() +
     theme(text = element_text(family = "serif"),   
           #panel.grid.minor = element_blank(), 
@@ -1092,14 +1090,14 @@ neGDP_pc <-
       y = "Estimated maintenance costs (US$/km² p.a.)", 
       title = " ") + 
   coord_cartesian(clip="off") +
-  annotate("text", x=-Inf, y=Inf, label="B", hjust=1.7, vjust=0, size=5, fontface="bold", family='serif')
+  annotate("text", x = -Inf, y = Inf, label = "B", hjust = 1.7, vjust = 0, size = 5, fontface = "bold", family = 'serif')
 neGDP_pc
 
 # transformed axis  
 leGDP_pc <- 
  ggplot(pred_GDP, aes(x = GDP_pc, y = median)) +
   geom_line(size = 0.8, linetype = "dotted", color = "#8C1D40") +  # thinner line
-  geom_ribbon(aes(ymin = lower.HPD, ymax = upper.HPD), fill = "#800020", alpha = 0.2, color = NA) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "#800020", alpha = 0.2, color = NA) +
   geom_point(data = msubs, aes(x = GDP_pc, y = Cost_km), color = "#8C1D40") +
   theme_bw() +
   theme(text = element_text(family = "serif"),
@@ -1113,7 +1111,7 @@ leGDP_pc <-
     limits = c(0, 1e7)) +
   scale_x_continuous(
     labels = label_number(scale = 1e-3), 
-    limits = c(0, 80000))
+    limits = c(0, 90000))
 lmsize_pl
 
 #png("../Results/maintenance GDP.png", width = 1500, height = 1200, res = 300) 
