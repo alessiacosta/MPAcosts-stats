@@ -37,6 +37,7 @@ library(tibble)
 library(geoR)
 library(scales)       #for scientific notation on axes
 library(forcats)      #for factor manipulation
+library(grid)         #for x axis shared between two plots
 #sourcing functions from Murray's github repository
 source('helperFunctions.R')
 ```
@@ -817,14 +818,12 @@ pred_size <- pred_draws_e |>
     estimate = median(.value),
     lower = quantile(.value, 0.025),
     upper = quantile(.value, 0.975),
-    .groups = "drop"
-  ) |>
+    .groups = "drop") |>
   mutate(
     median = exp(estimate),
     lower = exp(lower),
     upper = exp(upper),
-    Size = exp(lSize)
-  )
+    Size = exp(lSize))
 # splitting datasets for different levels of protectiom
 fpe <- subset(pred_size, Protection_level == "Fully protected")
 mubse <- subset(pred_size, Protection_level == "Partially protected")

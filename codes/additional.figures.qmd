@@ -265,6 +265,149 @@ dev.off()
 # Coefficient plot
 ## Establishment coefficients
 ```{r}
+# saving posterior draws
+posterior_draws_e <- esubs.brm1 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median = median, 
+    hdi = ~HDInterval::hdi(.x),
+    rhat, 
+    ess_bulk,
+    Pl = ~mean(.x<0), 
+    Pg = ~mean(.x>0), 
+    se = ~sd(.x))
+# filtering out the interaction because first deletion
+posterior_draw_interaction <- posterior_draws_e |> 
+  filter(rownames(posterior_draws_e) == "5")
+# 1st deletion of the interaction term 
+posterior_draws_1_delition_int <- esubs.brm1 |>
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median = median, 
+                  hdi = ~HDInterval::hdi(.x),
+                  rhat, 
+                  ess_bulk,
+                  Pl = ~mean(.x<0), 
+                  Pg = ~mean(.x>0),
+                  se = ~sd(.x))
+# making coefficient plot for establishment regression
+est_coef <- ggplot() + 
+  geom_point(data = posterior_draws_1_delition_int, 
+             aes(x = median, y = seq_along(median), color = "Final model"), 
+             size = 3) + 
+  geom_errorbar(data = posterior_draws_1_delition_int, 
+                aes(xmin = lower, xmax = upper, y = seq_along(median), color = "Final model"), 
+                width = 0.2) + 
+  scale_y_continuous(
+    breaks = 1:5,
+    labels = c("Intercept", 
+               "ln(Size)", 
+               "Duration",
+               "Degree of protection¹\nMulti-use areas", 
+               "Interaction¹\nln(Size):Multi-use areas")) +
+  # adding point for the interaction term 
+  geom_point(data = posterior_draw_interaction, 
+             aes(x = median, y = 5, color = "1st deletion"), size = 3) +
+  geom_errorbar(data = posterior_draw_interaction, 
+                aes(xmin = lower, xmax = upper, y = 5, color = "1st deletion"), width = 0.2) +
+  geom_vline(xintercept = 0, color = "black", linewidth = 0.2) +
+  theme_bw() + 
+  theme(text = element_text(family = 'serif', color = 'black'), 
+        axis.title.x = element_blank()) + 
+  labs(
+    y = "Predictor variables") + 
+  coord_cartesian(xlim = c(-3, 12.5)) +
+  # creating a dummy layer for the legend
+  geom_point(data = data.frame(
+    model = c("1st deletion", "Final model"),
+    x = c(NA, NA),
+    y = c(NA, NA)),
+  aes(x = x, y = y, color = model), size = 3) +
+scale_color_manual(name = NULL,
+  values = c(
+    "1st deletion" = "#8C1D40",
+    "Final model" = "royalblue4"))
+est_coef
+# saving posterior drws for maintenance
+posterior_draws_m <- msubs.brm1 |>
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median = median, 
+                  hdi = ~HDInterval::hdi(.x),
+                  rhat, 
+                  ess_bulk,
+                  Pl = ~mean(.x<0), 
+                  Pg = ~mean(.x>0),
+                  se = ~sd(.x))
+# filtering out GDP because first deletion
+posterior_draw_gdp <- posterior_draws_m |> 
+  filter(rownames(posterior_draws_m) == "3")
+# posterior draws after first delition
+posterior_draws_1_deletion <- msubs.brm1 |>
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median = median, 
+                  hdi = ~HDInterval::hdi(.x),
+                  rhat, 
+                  ess_bulk,
+                  Pl = ~mean(.x<0), 
+                  Pg = ~mean(.x>0),
+                  se = ~sd(.x))
 
+# plotting coefficient plot for maintenance regression
+maint_coef <- ggplot() + 
+  geom_point(data = posterior_draws_1_deletion, 
+             aes(x = median, y = seq_along(median), color = "Final model"),
+             size = 3) +
+  geom_errorbar(data = posterior_draws_1_deletion, 
+                aes(xmin = lower, xmax = upper, y = seq_along(median), color = "Final model"), 
+                width = 0.2) +
+  scale_y_continuous(breaks = 1:5, 
+                   labels =
+                     c("Intercept", 
+                       "ln(Size)", 
+                       "Degree of protection¹\nMulti-use areas", 
+                       "Interaction¹\nln(Size):Multi-use areas", 
+                       "GDP per capita")) + 
+  # points for the GDP per capita coefficient
+  geom_point(data = posterior_draw_gdp, 
+             aes(x = median, y = 5, color = "1st deletion"), size = 3) +
+  geom_errorbar(data = posterior_draw_gdp, 
+                aes(xmin = lower, xmax = upper, y = 5, color = "1st deletion"), width = 0.2) +
+  geom_vline(xintercept = 0, color = "black", linewidth = 0.2) +
+  theme_bw() + 
+  theme(text = element_text(family = 'serif', color = 'black'), 
+        axis.title = element_blank()) +
+  coord_cartesian(xlim = c(-3, 12.5)) +
+# creating a dummy layer for the legend
+  geom_point(data = data.frame(
+    model = c("1st deletion", "Final model"),
+    x = c(NA, NA),
+    y = c(NA, NA)),
+  aes(x = x, y = y, color = model), size = 3) +
+scale_color_manual(name = NULL,
+  values = c(
+    "1st deletion" = "#8C1D40",
+    "Final model" = "royalblue4"))
+maint_coef
+
+# setting the x axis shared between the two plots
+horizontal_label <- textGrob(
+  "Coefficient estimate", 
+  x = 0.6,
+  y = 0.7, 
+  vjust = 0.5,
+  hjust = 0.5,
+  rot = 0, 
+  gp = gpar(fontsize = 11, 
+            fontfamily = "Times"))
+# Wrap the grob as a patchwork element 
+label_panel <- wrap_elements(full = horizontal_label)
+# Combining plots
+(est_coef + maint_coef) / label_panel + 
+  plot_layout(heights = c(10, 1))
 ```
-
