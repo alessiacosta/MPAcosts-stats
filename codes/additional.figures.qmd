@@ -261,9 +261,10 @@ total_GDP
 dev.off()
 ```
 
-
 # Coefficient plot
+
 ## Establishment coefficients
+
 ```{r}
 # saving posterior draws
 posterior_draws_e <- esubs.brm1 |> 
@@ -314,13 +315,14 @@ est_coef <- ggplot() +
                 aes(xmin = lower, xmax = upper, y = 5, color = "1st deletion"), width = 0.2) +
   geom_vline(xintercept = 0, color = "black", linewidth = 0.2) +
   theme_bw() + 
-  theme(text = element_text(family = 'serif', color = 'black'), 
+  theme(text = element_text(family = 'serif'), 
         axis.title.x = element_blank(),
+        axis.title.y = element_text(family = 'serif', face = 'plain'), 
         title = element_text(face = "bold"),
         legend.position = "none") + 
   labs(
     y = "Predictor variables", 
-    title = "A - Total establishment \n      costs (US$/km2)") + 
+    title = "A - Total establishment costs \n      (US$/km2)") + 
   coord_cartesian(xlim = c(-3, 12.5)) +
   # creating a dummy layer for the legend
   geom_point(data = data.frame(
@@ -383,7 +385,7 @@ maint_coef <- ggplot() +
                aes(xmin = lower, xmax = upper, y = 5, color = "1st deletion"), width = 0.2) +
   geom_vline(xintercept = 0, color = "black", linewidth = 0.2) +
   theme_bw() + 
-  theme(text = element_text(family = 'serif', color = 'black'), 
+  theme(text = element_text(family = 'serif'), 
         axis.title = element_blank(), 
         title = element_text(face = "bold")) + 
   labs(

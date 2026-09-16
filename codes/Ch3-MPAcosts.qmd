@@ -236,7 +236,7 @@ esubs <- esubs |>
   mutate(lSize = log(Size), 
          lCost_km = log(Cost_km))
 #summary(esubs)
-#form1 = bf(lCost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
+#form1 = bf(Cost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
 #correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
 form1 = bf(Cost_km ~ lSize + Years + lSize*Protection_level, family = lognormal)
 #backward deletion - removed the interaction
@@ -254,7 +254,7 @@ esubs.brm1 = brm(form1,
                thin = 5, 
                refresh = 0, 
                seed = 123, 
-               control = list(adapt_delta=0.99, max_treedepth=29),
+               control = list(adapt_delta = 0.99, max_treedepth = 29),
                backend = "cmdstanr")
 #making a conditional plot on a better scale 
 esubs.brm1 |>
