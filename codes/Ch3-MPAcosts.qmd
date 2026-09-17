@@ -3,6 +3,7 @@ title: "Ch3-MPAcosts"
 ---
 
 # Library
+
 ```{r}
 library(readr)
 library(ggplot2)
@@ -89,6 +90,7 @@ dev.off()
 ```
 
 ## Figure 1 - color coded by degree of protection
+
 ```{r}
 # Tally of entries for each country 
 fig1_tally <- fig1 |> 
@@ -238,13 +240,13 @@ esubs <- esubs |>
 #summary(esubs)
 #form1 = bf(Cost_km ~ scale(lSize) + scale(Years) + scale(GDP_pc) + Protection_level, family=gaussian()) # there is correlation between size and gdp
 #correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
-form1 = bf(Cost_km ~ lSize + Years + lSize*Protection_level, family = lognormal)
+form1 <- bf(Cost_km ~ lSize + Years + lSize*Protection_level, family = lognormal)
 #backward deletion - removed the interaction
-form1 = bf(Cost_km ~ lSize + Years + Protection_level, family = lognormal)
+form1 <- bf(Cost_km ~ lSize + Years + Protection_level, family = lognormal)
 # model with size only
-form1 = bf(Cost_km ~ lSize, family = lognormal)
+form1 <- bf(Cost_km ~ lSize, family = lognormal)
 # running the model with priors only
-esubs.brm1 = brm(form1, 
+esubs.brm1 <- brm(form1, 
                data = esubs, 
                sample_prior ='yes', 
                iter = 5000, 
@@ -785,8 +787,6 @@ dev.off()
 
 ```
 
-
-
 ## Summary plots
 
 ### Combining plots
@@ -802,6 +802,9 @@ dev.off()
 #### Size per each protection level - establishment
 
 ```{r}
+# remove Nas
+esubs <- esubs |> 
+  filter(!is.na(Years), !is.na(lSize))
 #prediction of the establishment costs/km2 per year
 pred_draws_e <- emmeans(
   esubs.brm1,
@@ -844,7 +847,7 @@ nesize_pl <-
     labels = scales::label_number()) +
   coord_cartesian(ylim = c(0, 1e6), clip = "on") +  # zoom without dropping rows
  scale_x_continuous(
-   trans = "log",  # this makes the x axis on a ln scale
+   trans = scales::log10_trans(),  # this makes the x axis on a ln scale
    breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),  # tick positions in original scale
     labels = scales::label_log()
   ) +
@@ -891,11 +894,11 @@ lesize_pl <-
     labels = scales::label_log(),
     limits = c(0, 1e7)) +
  scale_x_continuous(
-     trans = "log",  # this makes the x axis on a ln scale
+     trans = scales::log10_trans(),  # this makes the x axis on a log10 scale
       breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
       labels = scales::label_log()) +
   theme_bw() +
-  theme(text = element_text(family = "serif", size=7),
+  theme(text = element_text(family = "serif", size = 7),
          axis.title = element_blank(),
          # These lines remove the grid
     panel.grid.major = element_blank(),
@@ -978,8 +981,8 @@ nmsize_pl <-
   labs(
     x = "Size (km²)",
     y = "Estimated maitenance costs (US$/km² p.a.)",
-    color = "Degree of protection",
-    fill = "Degree of protection", 
+    color = "Degree of protection\n (± Credible interval)",
+    fill = "Degree of protection\n (± Credible interval)", 
     title = " ") +
   coord_cartesian(clip = "off") +
   annotate("text", x = 1, y = Inf, label = "B", hjust = 2.8, vjust = 0.4, size = 5, fontface = "bold", family = 'serif')
@@ -1124,4 +1127,3 @@ GDP <-
     top = 0.98)
 #dev.off()
 ```
-
