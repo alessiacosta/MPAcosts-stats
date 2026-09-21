@@ -227,6 +227,8 @@ cor(esubs$lSize, esubs$GDP_pc, method = "pearson")
 #cor(esubs$Years, esubs$lSize, use = "complete.obs")
 #library(corrplot)
 #corrplot(esubs[,c("Years", "lSize", "lCost_km", "GDP_pc")], method="circle")
+# checking correlation in Bayesian framework
+correlation <- correlation::correlation(esubs, select = c("lSize", "GDP_pc"), bayesian = TRUE)
 ```
 
 #### Fit the model
