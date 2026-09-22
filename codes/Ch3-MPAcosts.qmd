@@ -39,6 +39,7 @@ library(geoR)
 library(scales)       #for scientific notation on axes
 library(forcats)      #for factor manipulation
 library(grid)         #for x axis shared between two plots
+library(correlation)  #for bayes correlation
 #sourcing functions from Murray's github repository
 source('helperFunctions.R')
 ```
