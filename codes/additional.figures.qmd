@@ -303,10 +303,10 @@ est_coef <- ggplot() +
   scale_y_continuous(
     breaks = 1:5,
     labels = c("Intercept", 
-               "ln(Size)", 
+               "ln(Area)", 
                "Duration",
                "Degree of protection¹\nMulti-use areas", 
-               "Interaction¹\nln(Size):Multi-use areas")) +
+               "Interaction¹\nln(Area):Multi-use areas")) +
   # adding point for the interaction term 
   geom_point(data = posterior_draw_interaction, 
              aes(x = median, y = 5, color = "1st deletion"), size = 3) +
@@ -325,7 +325,7 @@ est_coef <- ggplot() +
         legend.position = "none") + 
   labs(
     y = "Predictor variables",
-    x = "Estimates (± Credible interval)", 
+    x = "Estimates (± credible interval)", 
     title = "A - Total establishment costs \n      (US$/km²)") + 
   coord_cartesian(xlim = c(-3, 12.5)) +
   # creating a dummy layer for the legend
@@ -378,9 +378,9 @@ maint_coef <- ggplot() +
   scale_y_continuous(
     breaks = 1:5,
     labels = c("Intercept", 
-               "ln(Size)", 
+               "ln(Area)", 
                "Degree of protection¹\nMulti-use areas", 
-               "Interaction¹\nln(Size):Multi-use areas", 
+               "Interaction¹\nln(Area):Multi-use areas", 
                "GDP per capita")) +
   # adding point for the interaction term 
   geom_point(data = posterior_draw_gdp, 
@@ -400,7 +400,7 @@ maint_coef <- ggplot() +
         title = element_text(face = 'bold'), 
         legend.title = element_text(face = 'plain')) + 
   labs(
-    x = "Estimates (± Credible interval)",
+    x = "Estimates (± credible interval)",
     title = "B - Annual maintenance costs \n      (US$/km² per annum)") + 
   coord_cartesian(xlim = c(-3, 12.5)) +
   # creating a dummy layer for the legend

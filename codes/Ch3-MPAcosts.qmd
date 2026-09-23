@@ -599,7 +599,7 @@ esubs |> ggplot(aes(y=Cost_km, x=Size)) +
 
 ```{r}
 #standardising the cost_km into smaller values
-msubs<- msubs |> 
+msubs <- msubs |> 
    mutate(lCost_km = log(Cost_km)) |> 
   mutate(lSize = log(Size))
 #model formula 
