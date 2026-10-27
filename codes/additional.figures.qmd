@@ -263,12 +263,16 @@ dev.off()
 # Coefficient plot
 
 ## Establishment coefficients
-
 ```{r}
+# checking the names of the variables - first deletion
+rownames(fixef(esubs.brm2))
+# checking predictors names - full model
+rownames(fixef(esubs.brm1))
 # saving posterior draws
 posterior_draws_e <- esubs.brm1 |> 
   as_draws_df() |>  
-  dplyr::select(matches("^b_.*")) |> 
+  dplyr::select(matches("^b_.*"), 
+                -b_Intercept) |> 
   summarise_draws(
     median = median, 
     hdi = ~HDInterval::hdi(.x),
@@ -279,11 +283,12 @@ posterior_draws_e <- esubs.brm1 |>
     se = ~sd(.x))
 # filtering out the interaction because first deletion
 posterior_draw_interaction <- posterior_draws_e |> 
-  filter(rownames(posterior_draws_e) == "5")
+  filter(variable == "b_lSize:Protection_levelPartiallyprotected")
 # 1st deletion of the interaction term 
-posterior_draws_1_delition_int <- esubs.brm1 |>
+posterior_draws_1_delition_int <- esubs.brm2 |>
   as_draws_df() |>  
-  dplyr::select(matches("^b_.*")) |> 
+  dplyr::select(matches("^b_.*"), 
+                -b_Intercept) |> 
   summarise_draws(
     median = median, 
                   hdi = ~HDInterval::hdi(.x),
@@ -292,57 +297,105 @@ posterior_draws_1_delition_int <- esubs.brm1 |>
                   Pl = ~mean(.x<0), 
                   Pg = ~mean(.x>0),
                   se = ~sd(.x))
+# create teh raw posterior draws for teh halfeye
+posterior_halfeye <- esubs.brm2 |>
+  as_draws_df() |>
+  dplyr::select(
+    b_lSize,
+    b_Years,
+    b_Protection_levelPartiallyprotected) |>
+  tidyr::pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "estimate")
+# create teh draws for halfeye for the interaction 
+posterior_halfeye_interaction <- esubs.brm1 |>
+  as_draws_df() |>
+  dplyr::select(
+    `b_lSize:Protection_levelPartiallyprotected`) |>
+  tidyr::pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "estimate")
+# combine draws
+posterior_halfeye_all <- dplyr::bind_rows(
+  posterior_halfeye,
+  posterior_halfeye_interaction)
+# give predictors names for the halfeye plot
+posterior_halfeye_all <- posterior_halfeye_all |>
+  dplyr::mutate(
+    predictor = dplyr::case_when(
+      variable == "b_lSize" ~ 
+        "ln(Area)",
+      variable == "b_Years" ~ 
+        "Duration",
+      variable == "b_Protection_levelPartiallyprotected" ~ 
+        "Degree of protection¹\nMulti-use areas",
+      variable == "b_lSize:Protection_levelPartiallyprotected" ~ 
+        "Interaction¹\nln(Area):Multi-use areas"))
+# set predictors order
+posterior_halfeye_all <- posterior_halfeye_all |>
+  mutate(predictor = factor(predictor,levels = c(
+        "Interaction¹\nln(Area):Multi-use areas",
+        "ln(Area)", 
+        "Duration",
+        "Degree of protection¹\nMulti-use areas")))
+# calculate teh posterior probabilities
+posterior_probs <- posterior_halfeye_all |>
+  group_by(predictor) |>
+  summarise(
+    prob_greater_0 = mean(estimate > 0),
+    prob_less_0 = mean(estimate < 0),
+    .groups = "drop")
+
 # making coefficient plot for establishment regression
-est_coef <- ggplot() + 
-  geom_point(data = posterior_draws_1_delition_int, 
-             aes(x = median, y = seq_along(median), color = "Final model"), 
-             size = 3) + 
-  geom_errorbar(data = posterior_draws_1_delition_int, 
-                aes(xmin = lower, xmax = upper, y = seq_along(median), color = "Final model"), 
-                width = 0.2) + 
-  scale_y_continuous(
-    breaks = 1:5,
-    labels = c("Intercept", 
-               "ln(Area)", 
-               "Duration",
-               "Degree of protection¹\nMulti-use areas", 
-               "Interaction¹\nln(Area):Multi-use areas")) +
-  # adding point for the interaction term 
-  geom_point(data = posterior_draw_interaction, 
-             aes(x = median, y = 5, color = "1st deletion"), size = 3) +
-  geom_errorbar(data = posterior_draw_interaction, 
-                aes(xmin = lower, xmax = upper, y = 5, color = "1st deletion"), width = 0.2) +
-  geom_vline(xintercept = 0, color = "black", linewidth = 0.2) +
-  geom_text(data = data.frame(
-    x = posterior_draws_1_delition_int$median[c(2,3,4)] + 1.2,
-    y = c(2,3,4),
-    label = c("**","*","*")),
-    aes(x = x, y = y, label = label), size = 5) +
-  theme_bw() + 
-  theme(text = element_text(family = 'serif'), 
-        axis.title = element_text(family = 'serif', face = 'plain'), 
-        title = element_text(face = "bold"),
-        legend.position = "none") + 
+est_coef <- ggplot(posterior_halfeye_all, aes(x = estimate, y = predictor)) +
+  # Final-model coefficients: light/dark blue split at zero
+  ggdist::stat_slab(
+  data = posterior_halfeye_all |>
+    dplyr::filter(
+      variable != "b_lSize:Protection_levelPartiallyprotected"), aes(fill = after_stat(x > 0)), colour = "grey20", 
+  linewidth = 0.4,
+  scale = 0.9,
+  normalize = "groups") +
+  scale_fill_manual(values = c(`FALSE` = "lightsteelblue2",`TRUE` = "royalblue4"), guide = "none") +
+  # start a separate fill scale for teh interaction 
+  ggnewscale::new_scale_fill() +
+  # Interaction from the first deletion: burgundy
+  ggdist::stat_slab(
+  data = posterior_halfeye_all |>
+    dplyr::filter(variable == "b_lSize:Protection_levelPartiallyprotected"), aes(fill = after_stat(x > 0)), colour = "#8C1D40",
+  linewidth = 0.4,
+  scale = 0.9,
+  normalize = "groups") +
+  scale_fill_manual(values = c(`FALSE` = "#D8A6B5", `TRUE`  = "#8C1D40"), guide = "none") +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "black", linewidth = 0.5) +
   labs(
-    y = "Predictor variables",
-    x = "Estimates (± credible interval)", 
-    title = "A - Total establishment costs \n      (US$/km²)") + 
-  coord_cartesian(xlim = c(-3, 12.5)) +
-  # creating a dummy layer for the legend
-  geom_point(data = data.frame(
-    model = c("1st deletion", "Final model"),
-    x = c(NA, NA),
-    y = c(NA, NA)),
-  aes(x = x, y = y, color = model), size = 3) +
-scale_color_manual(name = NULL,
-  values = c(
-    "1st deletion" = "#8C1D40",
-    "Final model" = "royalblue4"))
+    x = "Posterior estimate",
+    y = NULL,
+    title = "A - Total establishment costs (US$/km²)") +
+  coord_cartesian(xlim = c(-4, 4)) +
+  theme_classic(base_size = 10) +
+  theme(
+    text = element_text(family = "serif"),
+    #axis.line.y = element_blank(),
+    #axis.ticks.y = element_blank(),
+    axis.text.y = element_text(size = 10, colour = "black", vjust = 0),
+    plot.title = element_text(face = "bold", size = 12))
 est_coef
+```
+
+## Maintenance coefficients
+```{r}
+# checking the names of the variables - first deletion
+rownames(fixef(msubs.brm2))
+# checking predictors names - full model
+rownames(fixef(msubs.brm1))
 # saving posterior drws for maintenance
 posterior_draws_m <- msubs.brm1 |>
   as_draws_df() |>  
-  dplyr::select(matches("^b_.*")) |> 
+  dplyr::select(matches("^b_.*"), 
+                -b_Intercept) |> 
   summarise_draws(
     median = median, 
                   hdi = ~HDInterval::hdi(.x),
@@ -353,11 +406,12 @@ posterior_draws_m <- msubs.brm1 |>
                   se = ~sd(.x))
 # filtering out GDP because first deletion
 posterior_draw_gdp <- posterior_draws_m |> 
-  filter(rownames(posterior_draws_m) == "3")
+  filter(variable == "b_GDP_pc")
 # posterior draws after first delition
-posterior_draws_1_deletion <- msubs.brm1 |>
+posterior_draws_1_deletion <- msubs.brm2 |>
   as_draws_df() |>  
-  dplyr::select(matches("^b_.*")) |> 
+  dplyr::select(matches("^b_.*"), 
+                -b_Intercept) |> 
   summarise_draws(
     median = median, 
                   hdi = ~HDInterval::hdi(.x),
@@ -366,53 +420,89 @@ posterior_draws_1_deletion <- msubs.brm1 |>
                   Pl = ~mean(.x<0), 
                   Pg = ~mean(.x>0),
                   se = ~sd(.x))
-
+# create teh raw posterior draws for teh halfeye
+posterior_halfeye_m <- msubs.brm2 |>
+  as_draws_df() |>
+  dplyr::select(
+    matches("^b_"),
+    -b_Intercept) |>
+  tidyr::pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "estimate")
+# extract GDP from posterior from the full model
+posterior_halfeye_gdp <- msubs.brm1 |>
+  as_draws_df() |>
+  dplyr::select(
+    b_GDP_pc) |>
+  tidyr::pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "estimate")
+# combining the posterior draws for halfeye plot
+posterior_halfeye_m_all <- dplyr::bind_rows(
+  posterior_halfeye_m,
+  posterior_halfeye_gdp)
+# giving maintenacne predictors names for the halfeye plot
+posterior_halfeye_m_all <- posterior_halfeye_m_all |>
+  dplyr::mutate(
+    predictor = dplyr::case_when(
+      variable == "b_lSize" ~ "ln(Area)",
+      variable == "b_GDP_pc" ~ "GDP per capita",
+      variable == "b_Protection_levelPartiallyprotected" ~"Degree of protection¹\nMulti-use areas",
+      variable == "b_lSize:Protection_levelPartiallyprotected" ~ "Interaction¹\nln(Area):Multi-use areas"))
+# set y axis order
+posterior_halfeye_m_all <- posterior_halfeye_m_all |>
+  dplyr::mutate(
+    predictor = factor(
+      predictor,
+      levels = c(
+        "GDP per capita", 
+        "ln(Area)", 
+        "Degree of protection¹\nMulti-use areas",
+        "Interaction¹\nln(Area):Multi-use areas")))
+# calculate posterior probabilities 
+posterior_probs_m <- posterior_halfeye_m_all |>
+  dplyr::group_by(predictor) |>
+  dplyr::summarise(
+    prob_greater_0 = mean(estimate > 0),
+    prob_less_0 = mean(estimate < 0),
+    .groups = "drop")
 # plotting coefficient plot for maintenance regression
-maint_coef <- ggplot() + 
-  geom_point(data = posterior_draws_1_deletion, 
-             aes(x = median, y = seq_along(median), color = "Final model"), 
-             size = 3) + 
-  geom_errorbar(data = posterior_draws_1_deletion, 
-                aes(xmin = lower, xmax = upper, y = seq_along(median), color = "Final model"), 
-                width = 0.2) + 
-  scale_y_continuous(
-    breaks = 1:5,
-    labels = c("Intercept", 
-               "ln(Area)", 
-               "Degree of protection¹\nMulti-use areas", 
-               "Interaction¹\nln(Area):Multi-use areas", 
-               "GDP per capita")) +
-  # adding point for the interaction term 
-  geom_point(data = posterior_draw_gdp, 
-             aes(x = median, y = 5, color = "1st deletion"), size = 3) +
-  geom_errorbar(data = posterior_draw_gdp, # this does not work - but the error bars are so small that you cant see them on the plot
-               aes(xmin = lower, xmax = upper, y = 5, color = "1st deletion"), width = 0.2) +
-  geom_vline(xintercept = 0, color = "black", linewidth = 0.2) +
-  geom_text(data = data.frame(
-    x = posterior_draws_1_deletion$median[c(2,4)] + 1.3,
-    y = c(2,4),
-    label = c("**","*")),
-    aes(x = x, y = y, label = label), size = 5) +
-  theme_bw() + 
-  theme(text = element_text(family = 'serif'), 
-        axis.title.y = element_blank(), 
-        axis.title.x = element_text(face = 'plain'),
-        title = element_text(face = 'bold'), 
-        legend.title = element_text(face = 'plain')) + 
+maint_coef <- ggplot(
+  posterior_halfeye_m_all,
+  aes(x = estimate, y = predictor)) +
+  # Final-model predictors
+  ggdist::stat_slab(data = posterior_halfeye_m_all |>
+      dplyr::filter(variable != "b_GDP_pc"), aes(fill = after_stat(x > 0)), colour = "grey20", linewidth = 0.4,
+    scale = 0.9,
+    normalize = "groups") +
+  scale_fill_manual(values = c(
+      `FALSE` = "lightsteelblue2",
+      `TRUE`  = "royalblue4"), guide = "none") +
+  # New fill scale for deleted GDP predictor
+  ggnewscale::new_scale_fill() +
+  # GDP: first deletion
+  ggdist::stat_slab(
+    data = posterior_halfeye_m_all |>
+      dplyr::filter(variable == "b_GDP_pc"), aes(fill = after_stat(x > 0)),
+    colour = "#8C1D40", linewidth = 0.4, scale = 0.9, normalize = "groups") +
+  scale_fill_manual(values = c(
+      `FALSE` = "#D8A6B5",
+      `TRUE`  = "#8C1D40"), guide = "none") +
+  # Zero-effect reference
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "black", linewidth = 0.5) +
   labs(
-    x = "Estimates (± credible interval)",
-    title = "B - Annual maintenance costs \n      (US$/km² per annum)") + 
-  coord_cartesian(xlim = c(-3, 12.5)) +
-  # creating a dummy layer for the legend
-  geom_point(data = data.frame(
-    model = c("1st deletion", "Final model"),
-    x = c(NA, NA),
-    y = c(NA, NA)),
-  aes(x = x, y = y, color = model), size = 3) +
-scale_color_manual(name = "Backward deletion steps",
-  values = c(
-    "1st deletion" = "#8C1D40",
-    "Final model" = "royalblue4"))
+    x = "Posterior estimate",
+    y = NULL,
+    title = "B - Total maintenance costs (US$/km²/year)") +
+  theme_classic(base_size = 10) +
+  theme(
+    text = element_text(family = "serif"),
+    #axis.line.y = element_blank(),
+    #axis.ticks.y = element_blank(),
+    axis.text.y = element_text(size = 10, colour = "black", vjust = 0), 
+    plot.title = element_text(face = "bold", size = 12))
 maint_coef
 
 # Combining plots
@@ -455,3 +545,6 @@ cov_brms <- brm(mE_cov,
 
 loo_compare(loo(offset_brms), loo(cov_brms))
 ```
+
+
+

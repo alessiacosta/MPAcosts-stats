@@ -36,6 +36,9 @@ library(purrr)
 library(HDInterval)
 library(tibble)
 library(geoR)
+library(pak)
+library(ggdist)
+library(ggnewscale)
 library(scales)       #for scientific notation on axes
 library(forcats)      #for factor manipulation
 library(grid)         #for x axis shared between two plots
@@ -245,11 +248,23 @@ esubs <- esubs |>
 #correlation is too high to be able to include gdp or size in the model, however we can say that size explains more of the variance so we can use size size as a proxy for the gdp and only include the size in the model
 form1 <- bf(Cost_km ~ lSize + Years + lSize*Protection_level, family = lognormal)
 #backward deletion - removed the interaction
-form1 <- bf(Cost_km ~ lSize + Years + Protection_level, family = lognormal)
+form2 <- bf(Cost_km ~ lSize + Years + Protection_level, family = lognormal)
 # model with size only
-form1 <- bf(Cost_km ~ lSize, family = lognormal)
+form3 <- bf(Cost_km ~ lSize, family = lognormal)
 # running the model with priors only
 esubs.brm1 <- brm(form1, 
+               data = esubs, 
+               sample_prior ='yes', 
+               iter = 5000, 
+               warmup = 1000, 
+               chains = 3, 
+               cores = 3, 
+               thin = 5, 
+               refresh = 0, 
+               seed = 123, 
+               control = list(adapt_delta = 0.99, max_treedepth = 29),
+               backend = "cmdstanr")
+esubs.brm2 <- brm(form2, 
                data = esubs, 
                sample_prior ='yes', 
                iter = 5000, 
@@ -335,6 +350,18 @@ esubs.brm1 |>
 
 # untransformed results - these were used in the paper
 esubs.brm1 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median = median, 
+    hdi = ~HDInterval::hdi(.x),
+    rhat, 
+    ess_bulk,
+    Pl = ~mean(.x<0), 
+    Pg = ~mean(.x>0), 
+    se = ~sd(.x))
+# second model
+esubs.brm2 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   summarise_draws(
@@ -604,14 +631,27 @@ msubs <- msubs |>
   mutate(lSize = log(Size))
 #model formula 
 #by keeping the intercept at 0 we are forciing the relationship for which maitenance is a combination of management, administration and enforcement, #similarly by scaling the binary coded the protection level we are forcing the model to use the mean of the protection level --> an average MPAs (whatever that is)
-form = bf(Cost_km ~ lSize + GDP_pc + lSize*Protection_level, family = lognormal)
+form_m = bf(Cost_km ~ lSize + GDP_pc + lSize*Protection_level, family = lognormal)
 # backward deletion -  removed the GDP per capita
-form = bf(Cost_km ~ lSize + lSize*Protection_level, family = lognormal)
+form_m2 = bf(Cost_km ~ lSize + lSize*Protection_level, family = lognormal)
 # backward deletion - removed protection level 
 form = bf(Cost_km ~ lSize, family = lognormal)
 
 # running the model with priors only
-msubs.brm1 = brm(form, 
+msubs.brm1 = brm(form_m, 
+               data = msubs, 
+               sample_prior ='yes', 
+               iter = 5000, 
+               warmup = 1000, 
+               chains = 3, 
+               cores = 3, 
+               thin = 5, 
+               refresh = 0, 
+               seed = 123, 
+               control = list(adapt_delta = 0.99, max_treedepth = 15),
+               backend = "cmdstanr")
+# first deletion
+msubs.brm2 = brm(form_m2, 
                data = msubs, 
                sample_prior ='yes', 
                iter = 5000, 
@@ -702,6 +742,18 @@ msubs.brm1 |>
 
 # summary of draws on a log scale  - not backtransformed
 msubs.brm1 |> 
+  as_draws_df() |>  
+  dplyr::select(matches("^b_.*")) |> 
+  summarise_draws(
+    median = median, 
+                  hdi = ~HDInterval::hdi(.x),
+                  rhat, 
+                  ess_bulk,
+                  Pl = ~mean(.x<0), 
+                  Pg = ~mean(.x>0),
+                  se = ~sd(.x))   # calculate teh standard error
+# first deletion results
+msubs.brm2 |> 
   as_draws_df() |>  
   dplyr::select(matches("^b_.*")) |> 
   summarise_draws(
