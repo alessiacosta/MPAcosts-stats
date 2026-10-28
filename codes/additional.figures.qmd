@@ -370,12 +370,17 @@ est_coef <- ggplot(posterior_halfeye_all, aes(x = estimate, y = predictor)) +
   normalize = "groups") +
   scale_fill_manual(values = c(`FALSE` = "#D8A6B5", `TRUE`  = "#8C1D40"), guide = "none") +
   geom_vline(xintercept = 0, linetype = "dashed", colour = "black", linewidth = 0.5) +
+  geom_text(
+  data = data.frame(
+    predictor = factor(c("ln(Area)", "Duration", "Degree of protection¹\nMulti-use areas"), 
+                       levels = levels(posterior_halfeye_all$predictor)), x = c(-0.25, 0.5, 1.8), label = c("**", "*", "*")),
+  aes(x = x, y = predictor, label = label), inherit.aes = FALSE, colour = "black", nudge_y = 0.75, size = 5) +
   labs(
     x = "Posterior estimate",
     y = NULL,
     title = "A - Total establishment costs (US$/km²)") +
   coord_cartesian(xlim = c(-4, 4)) +
-  theme_classic(base_size = 10) +
+  theme_classic(base_size = 8) +
   theme(
     text = element_text(family = "serif"),
     #axis.line.y = element_blank(),
@@ -492,11 +497,18 @@ maint_coef <- ggplot(
       `TRUE`  = "#8C1D40"), guide = "none") +
   # Zero-effect reference
   geom_vline(xintercept = 0, linetype = "dashed", colour = "black", linewidth = 0.5) +
+  geom_text(
+  data = data.frame(
+    predictor = factor(c("ln(Area)", "Degree of protection¹\nMulti-use areas", "Interaction¹\nln(Area):Multi-use areas"),
+      levels = levels(posterior_halfeye_m_all$predictor)),
+    x = c(-0.35, 1.1, 0.8),
+    label = c("**", " ", "*")), aes(x = x, y = predictor, label = label), 
+  inherit.aes = FALSE, colour = "black", nudge_y = 0.75, size = 5) +
   labs(
     x = "Posterior estimate",
     y = NULL,
-    title = "B - Total maintenance costs (US$/km²/year)") +
-  theme_classic(base_size = 10) +
+    title = "B - Annual maintenance costs (US$/km²/year)") +
+  theme_classic(base_size = 8) +
   theme(
     text = element_text(family = "serif"),
     #axis.line.y = element_blank(),
@@ -505,10 +517,18 @@ maint_coef <- ggplot(
     plot.title = element_text(face = "bold", size = 12))
 maint_coef
 
+maint_coef <- maint_coef +
+  # Dummy points only for creating the legend
+  geom_point(data = data.frame(estimate = c(NA, NA), predictor = c(NA, NA), model = c("Final model", "1st deletion")),
+    aes(x = estimate, y = predictor, colour = model), inherit.aes = FALSE, size = 4, shape = 15, show.legend = TRUE) +
+  scale_colour_manual(name = "Backward deletion steps", values = c("Final model" = "royalblue4", "1st deletion" = "#8C1D40")) +
+  scale_y_discrete(na.translate = FALSE)
+maint_coef
+
 # Combining plots
 coefficient_plots <- est_coef + maint_coef
 # Export the plot
-png("../Results/coefficients plot.png", width = 2800, height = 1400, res = 300)
+png("../Results/coefficients plot.png", width = 3200, height = 1400, res = 300)
 coefficient_plots
 dev.off()
 ```
